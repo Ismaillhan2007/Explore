@@ -60,3 +60,4 @@ venv/
 # Local secrets (CI license files, keys)
 *.ulf
 *.pem
+*.slnx

@@ -5,8 +5,11 @@ set -euo pipefail
 
 git lfs install
 
-# Default macOS path; pass your own path (or edit) for other versions/OSes.
-DRIVER="${1:-/Applications/Unity/Hub/Editor/$(ls /Applications/Unity/Hub/Editor 2>/dev/null | sort | tail -1)/Unity.app/Contents/Tools/UnityYAMLMerge}"
+# Default macOS path for the project's editor version; pass your own path for other OSes.
+VERSION="$(sed -n 's/^m_EditorVersion: //p' ProjectSettings/ProjectVersion.txt)"
+EDITOR_DIR="/Applications/Unity/Hub/Editor/$VERSION/Unity.app/Contents"
+DRIVER="${1:-$EDITOR_DIR/Helpers/UnityYAMLMerge}"
+[ -x "$DRIVER" ] || DRIVER="$EDITOR_DIR/Resources/UnityYAMLMerge"
 
 if [ ! -x "$DRIVER" ]; then
   echo "UnityYAMLMerge not found at: $DRIVER"
