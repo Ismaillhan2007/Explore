@@ -18,5 +18,5 @@ Unity 6000.6.7f1, URP, XR Interaction Toolkit 3.x, OpenXR. VR app: walk through 
 ## Review checklist
 1. Missing script / missing reference introduced?
 2. Scene or prefab changed by someone who doesn't own it?
-3. Scale/position of objects absurd (outside ±100 m, zero or negative scale)?
+3. Scale/position of objects absurd (outside ±100 m, zero scale)?
 4. New asset not covered by LFS rules?

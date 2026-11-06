@@ -4,6 +4,9 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/_Project/Scenes/TestRoom.unity
+    guid: d1aae826fc7654be2b2f0bd11fe72029
   m_configObjects:
     com.unity.xr.openxr.settings4: {fileID: 11400000, guid: 208262c009fca434cb0f1ac77faf9fc7, type: 2}

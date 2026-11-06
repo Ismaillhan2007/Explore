@@ -70,7 +70,10 @@ namespace RoomVR.Tests
                             Assert.Less(Mathf.Abs(t.position.x), MaxSceneExtent, $"{path}: {t.name} x out of range");
                             Assert.Less(Mathf.Abs(t.position.y), MaxSceneExtent, $"{path}: {t.name} y out of range");
                             Assert.Less(Mathf.Abs(t.position.z), MaxSceneExtent, $"{path}: {t.name} z out of range");
-                            Assert.Greater(t.lossyScale.x, 0f, $"{path}: {t.name} has non-positive scale");
+                            // Negative scale is legal (mirrored models); zero scale on any axis is not.
+                            Assert.Greater(Mathf.Abs(t.lossyScale.x), 0f, $"{path}: {t.name} has zero X scale");
+                            Assert.Greater(Mathf.Abs(t.lossyScale.y), 0f, $"{path}: {t.name} has zero Y scale");
+                            Assert.Greater(Mathf.Abs(t.lossyScale.z), 0f, $"{path}: {t.name} has zero Z scale");
                         }
                 }
                 finally
