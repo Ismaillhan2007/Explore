@@ -2,6 +2,12 @@
 
 Event: 72-hour hackathon hosted by the Alkek Immersion Studio, Texas State, November (dates, theme, hardware and judging rules still to confirm; see "Open questions").
 
+## Current state (updated Nov 6, 2026)
+- **Done:** Unity 6000.6.7f1 project, URP, XR Interaction Toolkit 3.7, OpenXR; `TestRoom` scene (XR rig, teleport floor, table, 3 grabbable cubes, XR Device Simulator); Android/Quest settings (IL2CPP, ARM64, Vulkan, OpenXR + Meta Quest features); a test APK builds; 4 EditMode tests pass; Git LFS and Unity merge setup; CI conflict check.
+- **Blocked:** no headset is reachable. The studio's Quest 3S is visible over USB but not in Developer Mode (it is paired to other accounts). Until fixed, develop with the XR Device Simulator in the Editor.
+- **Not started:** room shells, pickable model library, scene JSON loader, photo algorithm, upload page, wall recolor, UI.
+- **Unconfirmed:** event dates, theme, judging rules, which hardware is provided (see open questions).
+
 ## 1. Concept
 Upload a photo of a room, then walk around a VR version of it and pick up and interact with objects. Stretch goal: change the wall color.
 Scope: 2 photos, 2 prebuilt VR scenes with pickable objects. Scenes are prerendered, so nothing heavy runs live in front of judges.
@@ -21,7 +27,7 @@ Scope: 2 photos, 2 prebuilt VR scenes with pickable objects. Scenes are prerende
 | Layer | Choice |
 |---|---|
 | Engine | Unity 6, URP, XR Interaction Toolkit, OpenXR |
-| Headset | Whatever the Immersion Studio provides; Quest 3 as the target if choice is open |
+| Headset | Studio Meta Quest 3S (seen over USB, Developer Mode not yet enabled); XR Device Simulator meanwhile |
 | Locomotion | Teleport + snap-turn (smooth movement causes motion sickness) |
 | Photo to 3D room | World Labs Marble or similar; fallback: Depth Anything V2 plus hand-built floor and wall planes |
 | Object extraction | SAM 2 for cutouts, TripoSR / Hunyuan3D / Meshy for image-to-3D |
@@ -34,10 +40,7 @@ Scope: 2 photos, 2 prebuilt VR scenes with pickable objects. Scenes are prerende
 Verify tool availability, licenses and pricing at the start; this list is from general knowledge.
 
 ## 4. Roles
-1. **XR/gameplay engineer** — Unity project, XR rig, grab and physics, locomotion, scene switcher, builds. Critical path.
-2. **3D pipeline and art** — photo to room to objects, Blender cleanup, scale and pivots, lighting, materials, wall-color material.
-3. **Integration, UI and demo** — upload page, in-VR UI (color picker, scene menu), audio, CI and repo hygiene, backup video, pitch, slides, submission.
-Pair on a second area so nothing stalls. Split sleep in shifts over 72 hours.
+Three roles: **A** XR/Unity engineer (critical path), **B** 3D pipeline and photo algorithm, **C** integration, UI, demo and repo. Responsibilities, folder ownership and the B-to-A scene JSON contract are in [TEAM.md](TEAM.md).
 
 ## 5. Repo and merge-conflict setup (first hour)
 - Force Text serialization, Visible Meta Files.

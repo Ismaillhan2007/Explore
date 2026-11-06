@@ -2,12 +2,12 @@
 
 Upload a photo of a room, then walk around a VR version of it and pick up objects. Hackathon project (Alkek Immersion Studio, Texas State). Two prebuilt scenes, optional wall-color change.
 
-Docs: [PLAN.md](PLAN.md) (design, roles, timeline, success criteria) · [CLAUDE.md](CLAUDE.md) (rules the AI reviewer enforces; also good team rules)
+Docs: [PLAN.md](PLAN.md) (design, timeline, success criteria) · [TEAM.md](TEAM.md) (roles, ownership, scene JSON contract) · [CLAUDE.md](CLAUDE.md) (rules the AI reviewer enforces; also good team rules)
 
 ## Get started (about 15 minutes)
 Everyone must use **exactly Unity 6000.6.7f1**. A different version rewrites scene files and causes conflicts.
 
-1. Install [Unity Hub](https://unity.com/download) and the editor **6000.6.7f1** (Hub → Installs → Install Editor → Archive). Add **Android Build Support** if we target Quest.
+1. Install [Unity Hub](https://unity.com/download) and the editor **6000.6.7f1** (Hub → Installs → Install Editor → Archive). Add the modules **Android Build Support**, **OpenJDK** and **Android SDK & NDK Tools** (needed for Quest builds).
 2. Install Git LFS: `brew install git-lfs` (macOS).
 3. Clone the repo:
    ```bash
@@ -36,14 +36,24 @@ Assets/_Project/
   Prefabs/Pickables/ grabbable objects
   Scripts/  Materials/  Models/
   Tests/EditMode/    scene and prefab validation tests
+  Editor/            setup and build scripts
+  Settings/          URP asset
 tools/setup-git.sh   per-clone git setup
 .github/workflows/   CI (conflict check; Unity tests off until license secrets are added)
+TEAM.md PLAN.md      roles/contract, design/timeline
 ```
 
+## Try it without a headset
+Open `Assets/_Project/Scenes/TestRoom.unity` and press Play. The **XR Device Simulator** (keyboard and mouse) lets you walk, teleport and grab the cubes. No headset or extra install is needed. Meta XR Simulator (a Quest runtime for Apple silicon Macs) is optional and not installed yet.
+
 ## Quest build
-Menu **RoomVR > Build Quest APK** (or `Unity -batchmode -buildTarget Android -executeMethod RoomVR.EditorTools.BuildQuest.Build`) writes `Builds/RoomVR.apk`. Install on a headset in Developer Mode with `adb install -r Builds/RoomVR.apk`.
-Settings (IL2CPP, ARM64, Vulkan, OpenXR + Meta Quest feature, Touch controller profiles) are applied by `ConfigureQuest.cs`. No headset can be reached yet, so on-device behavior is untested.
+Menu **RoomVR > Build Quest APK** (or `Unity -batchmode -buildTarget Android -executeMethod RoomVR.EditorTools.BuildQuest.Build`) writes `Builds/RoomVR.apk`. Install on a headset in Developer Mode with `adb install -r Builds/RoomVR.apk` (adb is in the Unity Android SDK `platform-tools`).
+Settings (IL2CPP, ARM64, Vulkan, OpenXR + Meta Quest feature, Touch controller profiles) are applied by `Assets/_Project/Editor/ConfigureQuest.cs`. The APK builds, but on-device behavior is untested because no headset is in Developer Mode yet.
+
+## Editor tools (`Assets/_Project/Editor`)
+`ImportXRSamples` (XRI sample assets), `BuildTestScene` (rebuilds `TestRoom` and the URP asset), `ConfigureQuest` (Android/OpenXR settings), `BuildQuest` (APK build). Run via `Unity -batchmode -executeMethod ...`. Do not re-run `BuildTestScene` once `TestRoom` has hand edits; it overwrites the scene.
 
 ## Status
-Done: Unity project, URP + XR Interaction Toolkit + OpenXR, `TestRoom` scene (rig, teleport floor, grabbable cubes, XR Device Simulator), Quest/Android settings, APK builds, tests.
-Not yet: a headset in Developer Mode, real room scenes and objects, photo pipeline, upload page.
+Done: project, packages, `TestRoom` scene, Quest settings, APK build, tests, git/LFS/CI setup, docs.
+Blocked: headset Developer Mode (Quest 3S is the studio's, paired to other accounts).
+Next: scene JSON format, loader, room shell and first pickable models, photo algorithm. See [TEAM.md](TEAM.md) for who does what.
