@@ -2,6 +2,8 @@
 
 Unity 6000.6.7f1, URP, XR Interaction Toolkit 3.x, OpenXR. VR app: walk through a room built from a photo and pick up objects. Two prebuilt scenes.
 
+- **Never add `Co-Authored-By: Claude ...` (or any AI assistant) trailer to commit messages.** No AI-attribution trailers, footers, or sign-offs of any kind.
+
 ## Layout
 - `Assets/_Project/Scenes` — one scene per room. Each scene has ONE owner at a time; do not edit a scene someone else owns.
 - `Assets/_Project/Prefabs/Pickables` — every pickable object is a prefab here.
