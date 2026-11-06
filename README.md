@@ -40,6 +40,10 @@ tools/setup-git.sh   per-clone git setup
 .github/workflows/   CI (conflict check; Unity tests off until license secrets are added)
 ```
 
+## Quest build
+Menu **RoomVR > Build Quest APK** (or `Unity -batchmode -buildTarget Android -executeMethod RoomVR.EditorTools.BuildQuest.Build`) writes `Builds/RoomVR.apk`. Install on a headset in Developer Mode with `adb install -r Builds/RoomVR.apk`.
+Settings (IL2CPP, ARM64, Vulkan, OpenXR + Meta Quest feature, Touch controller profiles) are applied by `ConfigureQuest.cs`. No headset can be reached yet, so on-device behavior is untested.
+
 ## Status
-Done: Unity project, URP + XR Interaction Toolkit + OpenXR packages, tests, CI skeleton.
-Not yet: VR rig and first scene, OpenXR/Quest settings, scenes, objects, upload page.
+Done: Unity project, URP + XR Interaction Toolkit + OpenXR, `TestRoom` scene (rig, teleport floor, grabbable cubes, XR Device Simulator), Quest/Android settings, APK builds, tests.
+Not yet: a headset in Developer Mode, real room scenes and objects, photo pipeline, upload page.

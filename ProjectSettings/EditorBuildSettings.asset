@@ -9,4 +9,5 @@ EditorBuildSettings:
     path: Assets/_Project/Scenes/TestRoom.unity
     guid: d1aae826fc7654be2b2f0bd11fe72029
   m_configObjects:
+    com.unity.xr.management.loader_settings: {fileID: 11400000, guid: ef43df1484eaf475492b8a59d928f8b8, type: 2}
     com.unity.xr.openxr.settings4: {fileID: 11400000, guid: 208262c009fca434cb0f1ac77faf9fc7, type: 2}
