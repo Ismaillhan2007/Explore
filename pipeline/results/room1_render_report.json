@@ -1,0 +1,80 @@
+{
+  "camera_height_m": 1.85,
+  "camera_height_from_depth_m": 2.137,
+  "scale_applied": 0.866,
+  "camera_pitch_down_deg": 13.8,
+  "ceiling_height_m": 3.42,
+  "floor_inlier_share": 0.193,
+  "floor_rms_residual_m": 0.011,
+  "yaw_correction_deg": 22.2,
+  "walls_found": [
+    "back",
+    "left",
+    "right"
+  ],
+  "wall_positions_m": {
+    "left": -2.1,
+    "right": 1.71,
+    "back": 2.8
+  },
+  "rejected_wall_candidates": [
+    {
+      "points": 2424,
+      "top_m": 1.88,
+      "extent_m": 4.54,
+      "distance_m": 2.27
+    },
+    {
+      "points": 1951,
+      "top_m": 0.6,
+      "extent_m": 3.81,
+      "distance_m": 1.6
+    }
+  ],
+  "room_width_m": 3.81,
+  "camera_to_back_wall_m": 5.36,
+  "camera_position_m": [
+    1.24,
+    1.85,
+    -2.56
+  ],
+  "origin": "x: left wall (best seen) and the known width (4.2 m); z: back wall minus half the known depth (5.6 m)",
+  "wall_color_measured": "#a5a092",
+  "wall_tint_used": "#ffffff",
+  "photo": "../docs/room-blender.png",
+  "camera_source": "given hfov 73.3 deg",
+  "hfov_deg": 73.3,
+  "seconds": 3.6,
+  "checks": [
+    {
+      "check": "camera height",
+      "value": "1.85 m vs 1.85 m",
+      "pass": true
+    },
+    {
+      "check": "room width",
+      "value": "3.81 m vs 4.20 m",
+      "pass": true
+    },
+    {
+      "check": "camera to back wall",
+      "value": "5.36 m vs 5.42 m",
+      "pass": true
+    },
+    {
+      "check": "camera x in room",
+      "value": "1.24 m vs 0.95 m",
+      "pass": true
+    },
+    {
+      "check": "floor found and flat",
+      "value": "rms 1.1 cm",
+      "pass": true
+    },
+    {
+      "check": "walls found",
+      "value": "back, left, right",
+      "pass": true
+    }
+  ]
+}

@@ -16,7 +16,7 @@ photo.jpg ──► [1 camera] ──► [2 depth] ──► [3 room] ──► 
                                               └── floor plane, walls, scale, wall tint ──────────────────────────┘
 ```
 
-Status: **skeleton**. Every step below is a stub with its inputs, outputs and approach written down. `validate_scene.py` works today. The hand-made [`scenes/scene_room_a.json`](scenes/scene_room_a.json) describes room 1 exactly as PR #4 built it, so Role A can build the loader now, without waiting for the algorithm.
+Status: **steps 1–3 work** (camera, depth, floor/walls/scale; tested on a render of room 1, see "Results so far" below). Steps 4–6 are still stubs with their approach written down. `validate_scene.py` works. The hand-made [`scenes/scene_room_a.json`](scenes/scene_room_a.json) describes room 1 exactly as PR #4 built it, so Role A can build the loader now, without waiting for the algorithm.
 
 ---
 
@@ -39,25 +39,27 @@ Each step is one file in [`steps/`](steps/) with one public function. Data passe
 - Principal point = image centre. Downscale the photo so the long side is ≤ 1024 px first; scale intrinsics with it.
 
 ### Step 2 — Depth (`steps/step2_depth.py`)
-**In:** photo. **Out:** `depth[H, W]` in *relative* units.
+**In:** photo, camera. **Out:** `depth[H, W]` in metres.
 
-- Run **Depth Anything V2** (Small or Base; Hugging Face `depth-anything/Depth-Anything-V2-*-hf`). It gives relative depth (sometimes inverse depth/disparity, check the model card and invert if needed).
-- Metric depth models (Depth Anything V2 Metric-Indoor, Depth Pro) are worth a try; if they work, step 3's scale fix becomes a sanity check instead of the main source of scale.
+- Run **Depth Anything V2 Metric-Indoor Small** (`depth-anything/Depth-Anything-V2-Metric-Indoor-Small-hf`). It outputs metres directly, so scale is something we can measure and check, not only assume. About 5 s per photo on a MacBook (Apple GPU), ~100 MB download the first time.
+- **Lens correction:** the model learned distances from 60° field-of-view images (Hypersim). A wider lens makes everything look smaller, so it guesses too far. Multiply depth by `(fx/width) / (fx/width at 60°)`. On the room 1 render (73° lens) this is ×0.78 and cut the scale error from ~49 % to ~15 %.
 - Back-project every pixel to a 3D point in camera space:
   `X = (u − cx) · Z / fx`, `Y = (v − cy) · Z / fy`, `Z = depth(u, v)`.
 
 ### Step 3 — Room geometry (`steps/step3_room.py`)
 **In:** point cloud, camera, photo. **Out:** `Room(floor_plane, walls, scale, wall_color, name)`.
 
-1. **Floor:** RANSAC plane fit on points from the bottom third of the image. Pick the plane whose normal is closest to camera "up" (−Y in camera space, because image rows grow downward). This defines world **up** and **y = 0**.
-2. **Walls:** remove floor inliers, run RANSAC again for planes that are roughly perpendicular to the floor (|normal · up| < 0.2). Keep the 1–3 largest.
-3. **Metric scale:** relative depth has the right shape but the wrong size. Fix it with one known measurement, in order of preference:
-   - **room already built (room 1):** match the fitted floor/wall extent to the room's `size_m` in `model_library.json` (4.2 × 5.6 × 3.5 m);
-   - camera height above the floor = **1.85 m**, the value PR #4 used for room 1's reference camera → `scale = 1.85 / distance(camera, floor_plane)`. A phone held at chest height is more like 1.4–1.6 m, so check it per photo;
-   - detected door height ≈ 2.0 m as a cross-check.
-   Multiply all points by `scale`. From here on everything is in metres.
-4. **Wall tint:** the walls are a separate mesh with an unlit material whose texture already holds the plaster colour *and* the baked lighting. `wallColor` **multiplies** that texture, so `#ffffff` means "as baked". Default to the room's `default_tint`. Only emit another tint if the photo's wall is clearly a different colour, and keep it light (a dark tint also darkens the baked light).
-5. **Room:** an existing room (room 1 → `RenderedRoom`) is used as is. A new room must first be built in Blender like PR #4. Use the measurements from this step (size, camera position, table/desk heights) as the brief, then add the room to `model_library.json`.
+What the code does (every number below is in the report, `debug/<name>/room_report.json`):
+
+1. **Floor:** RANSAC plane fit on points from the bottom 45 % of the image, keeping only planes whose normal is within 50° of camera "up" (−Y in camera space, because image rows grow downward). Refit with least squares on all inliers. The normal is world **up**; the distance from the camera to the plane is the **camera height**; the normal's tilt is the **camera pitch**.
+2. **Scale:** by default trust the metric depth. If the camera height is known or can be assumed (`--camera-height 1.85` for room 1, ~1.5 m for a phone at chest height), scale everything so the camera is at that height. **This is the more accurate option today** (see results).
+3. **Floor-aligned frame:** world x = camera right, y = up, z = camera forward flattened onto the floor. Every point gets a height above the floor.
+4. **Ceiling:** the densest 10 cm band of points above the camera. Everything above it is ignored when looking for walls.
+5. **Walls:** in the floor plan (x, z), repeatedly RANSAC-fit lines through points between the floor and the ceiling. A line is a wall only if its points reach ≥ 1.9 m high and run ≥ 1 m along the floor; this rejects sofas, beds and table tops. Rejected candidates are listed in the report for tuning.
+6. **Yaw:** rooms are rectangular, so rotate the floor plan until the biggest wall is axis-aligned. Walls are then named left/right/back/front by which side of the camera they are on. On each side the **farthest** candidate wins: walls bound the room, furniture stands in front of them.
+7. **Origin:** for a known room (`--room RenderedRoom`), place the best-seen side wall and the back wall at their known positions, so the origin is the room centre like in Unity. For an unknown room, x is midway between two side walls if both are seen, else under the camera.
+8. **Wall tint:** the walls are a separate mesh with an unlit material whose texture already holds the plaster colour *and* the baked lighting. `wallColor` **multiplies** that texture, so `#ffffff` means "as baked". Default to the room's `default_tint`. Only emit another tint if the photo's wall is clearly a different colour, and keep it light (a dark tint also darkens the baked light).
+9. **Room:** an existing room (room 1 → `RenderedRoom`) is used as is. A new room must first be built in Blender like PR #4. Use the measurements from this step (size, camera position, table/desk heights) as the brief, then add the room to `model_library.json`.
 
 ### Step 4 — Detect and segment objects (`steps/step4_detect.py`)
 **In:** photo, list of labels from `model_library.json`. **Out:** list of `Detection(label, score, box, mask)`.
@@ -151,11 +153,19 @@ The single list of room and model names both sides use.
 
 ```bash
 cd pipeline
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt          # heavy ML deps, only needed for steps 2, 4, 6
-python run_pipeline.py photos/room_a.jpg --name room_a   # writes scenes/scene_room_a.json (stubs raise NotImplementedError for now)
-python validate_scene.py scenes/scene_room_a.json         # stdlib only, works today
+python3.12 -m venv .venv && source .venv/bin/activate   # 3.12: PyTorch wheels are safest there
+pip install -r requirements.txt
+python -m unittest discover -s tests -v                  # geometry tests, no ML models needed
+
+# Steps 1-3 on a photo of room 1, graded against the known room:
+python run_pipeline.py photos/room_1.jpg --name room_1 --room RenderedRoom --camera-height 1.85 --stop-after room
+# Same check on the Blender render of room 1 (known 73.3 deg lens):
+python run_pipeline.py ../docs/room-blender.png --name render_check --room RenderedRoom --hfov 73.3 --camera-height 1.85 --stop-after room
+
+python validate_scene.py scenes/scene_room_a.json        # stdlib only
 ```
+
+Each run prints PASS/FAIL per check and writes `debug/<name>/depth.png`, `room_overlay.png` (floor green, left wall blue, right orange, back pink) and `room_report.json`.
 
 - Put input photos in `pipeline/photos/` (`.jpg`/`.png` go through Git LFS automatically).
 - Debug images (depth maps, masks, overlays) go to `pipeline/debug/`, which is not committed.
@@ -164,12 +174,35 @@ python validate_scene.py scenes/scene_room_a.json         # stdlib only, works t
 ## 7. Build order (what to do first)
 
 1. ✅ Hand-made `scenes/scene_room_a.json` matching PR #4's room 1, so Role A can build the loader. *(This PR.)*
-2. Steps 1 + 2 → save a depth map image. Check it looks right on both demo photos.
-3. Step 3 on photo 1 → floor plane, scale. The fitted room should come out close to 4.2 × 5.6 m and the camera close to 1.85 m. That is our accuracy check against a room we know.
+2. ✅ Steps 1 + 2 → depth map image.
+3. ✅ Step 3 → floor plane, walls, ceiling, scale, graded against room 1 (on the Blender render; see results below).
+3b. **Next:** add the real photos to `pipeline/photos/` and run step 3 on photo 1. The render is a perfect picture; a phone photo has noise, blur and an unknown lens, so expect worse numbers.
 4. Step 3 on photo 2 → measurements that brief the Blender build of room 2.
 5. Step 4 → overlay masks on the photo. Tune the label prompt and threshold.
 6. Steps 5 + 6 + 7 → first automatic JSON. Compare to the hand-made one in the headset.
 7. Only then: more pickables, better rotation, hero object via image-to-3D, live photo demo.
+
+### Results so far (room 1 Blender render, `docs/room-blender.png`)
+
+The real demo photos are not in the repo yet, so steps 1–3 were tested on the Blender render of room 1. It shows the same room from the same camera, and every true measurement is known from `build_room.py`.
+
+| Check (target) | Scale from depth model | Camera height fixed at 1.85 m | Truth |
+|---|---|---|---|
+| Camera height (± 0.25 m) | ❌ 2.14 m | (given) 1.85 m | 1.85 m |
+| Room width (± 15 %) | ✅ 4.37 m | ✅ 3.81 m | 4.20 m |
+| Camera to back wall (± 15 %) | ✅ 6.13 m | ✅ 5.36 m | 5.42 m |
+| Camera sideways position (± 0.30 m) | ❌ 1.68 m | ✅ 1.24 m | 0.95 m |
+| Ceiling height | 3.95 m | 3.42 m | 3.50 m |
+| Camera pitch | 13.8° down | 13.8° down | 12.4° down |
+| Floor flatness | ✅ 1.1 cm rms | ✅ 1.1 cm rms | flat |
+| Walls found | ✅ back, left, right | ✅ back, left, right | — |
+
+Runtime about 5 s after the first model download. The overlay, depth map and full report of the "camera height fixed" run are in [`results/`](results/).
+
+**Takeaways:**
+- The geometry (floor, walls, ceiling, angles) is solid. **Scale is the weak point**: the metric model is ~15 % too large here even after the lens correction. Use `--camera-height` whenever the photographer can say roughly how high they held the camera.
+- The right wall is seen only as a thin strip at the image edge, in line with the desk front, so its position is pulled ~30 cm inward. That is why, for a known room, the origin comes from the best-seen side wall plus the known width.
+- Not tested yet: a real phone photo, photo 2, and anything after step 3.
 
 ## 8. Known risks
 
