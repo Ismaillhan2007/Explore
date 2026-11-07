@@ -116,10 +116,9 @@ def table(x,y,r,h):
  for a in [0,math.tau/3,math.tau*2/3]:
   xx=x+math.cos(a)*r*.77; yy=y+math.sin(a)*r*.77;rod('Table leg',(xx,yy,.025),(xx,yy,h-.045),.027,wood)
 table(.65,.78,.39,.49);table(-.53,1.85,.32,.59)
-# Lamp beside bed, and small plant.
-cylinder('Lamp base',(-.58,1.89,.64),.105,.09,ceramic,.065);rod('Lamp stem',(-.58,1.89,.68),(-.58,1.89,.91),.016,brass)
-shade=mat('Lampshade linen',(.82,.67,.43),.9,(80,80,50)); p=shade.node_tree.nodes.get('Principled BSDF');p.inputs['Emission Color'].default_value=(1,.66,.26,1);p.inputs['Emission Strength'].default_value=.25
-cylinder('Lamp shade',(-.58,1.89,1.02),.20,.29,shade,.18);plant(-.34,1.81,.59,.6)
+# Small plant on the bedside table. The bedside lamp is NOT baked: it is the pickable
+# Prefabs/Pickables/lamp.prefab, placed by BuildRenderedRoom.cs at (-.58, 1.89) on this table.
+plant(-.34,1.81,.59,.6)
 # Bookcase on right, angled toward the doorway.
 case_before=set(scene.objects)
 cube('Bookcase back',(2.03,1.89,1.02),(.06,.83,1.94),wood)
@@ -160,11 +159,11 @@ art=mat('Quiet landscape',(.57,.53,.42),1,(2,2,6));cube('Landscape canvas',(1.04
 # Books on coffee table, keeping the right-hand side free for the existing mug.
 cube('Coffee table book',(.51,.82,.512),(.23,.18,.035),paper,.003)
 cube('Book cover',(.51,.82,.532),(.24,.19,.006),books[0],.002)
-# Soft daylight through opening, practical pool of warm lamp light.
+# Soft daylight through opening. No baked bedside-lamp light: the lamp is movable, so its
+# glow would stay painted on the table and wall after the lamp is picked up.
 def area(name,pos,target,power,color,size):
  d=bpy.data.lights.new(name,'AREA');d.energy=power;d.color=color;d.shape='DISK';d.size=size;o=bpy.data.objects.new(name,d);scene.collection.objects.link(o);o.location=pos;o.rotation_euler=(Vector(target)-o.location).to_track_quat('-Z','Y').to_euler()
 area('Window daylight',(-.72,2.95,2.1),(-.1,-1,0),180,(.80,.88,1),1.7)
-area('Warm lamp',(-.58,1.89,1.0),(-1,1.7,.5),12,(1,.66,.32),.25)
 area('Interior bounce',(0,-.8,3.25),(0,1,0),30,(1,.88,.70),3)
 # Luminous overcast exterior behind the blind.
 sky=mat('Overcast exterior',(.8,.87,1)); sp=sky.node_tree.nodes.get('Principled BSDF');sp.inputs['Emission Color'].default_value=(.8,.87,1,1);sp.inputs['Emission Strength'].default_value=.8

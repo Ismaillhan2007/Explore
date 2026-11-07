@@ -8,7 +8,7 @@ This folder turns **one photo of a room** into **one scene JSON file** that says
 - places **pickables** (mug, …) on the room's known surfaces, and
 - for a **new** room, measures the photo (size, camera, surfaces) to guide the Blender build.
 
-Room 1 = `RenderedRoom` (4.2 × 5.6 × 3.5 m), whose only pickable is the mug on the coffee table. All room numbers in this folder are copied from PR #4. If that PR changes, update [`model_library.json`](model_library.json).
+Room 1 = `RenderedRoom` (4.2 × 5.6 × 3.5 m). Its pickables are the mug on the coffee table and the bedside lamp on the bedside table (the lamp used to be baked; it is now `lamp.prefab`). All room numbers in this folder are copied from PR #4. If that PR changes, update [`model_library.json`](model_library.json).
 
 ```
 photo.jpg ──► [1 camera] ──► [2 depth] ──► [3 room] ──► [4 detect + segment] ──► [5 place] ──► [6 match] ──► [7 export] ──► scene_room_x.json
@@ -124,7 +124,7 @@ Agreed between Role B and Role A in [TEAM.md](../TEAM.md). Example: [`scenes/sce
 }
 ```
 
-That is room 1 as PR #4 built it: the mug on the coffee table, the only pickable. The baked furniture is part of the room and never appears in `objects`.
+That is room 1 as PR #4 built it: the mug on the coffee table. The full file in `scenes/` also has the bedside lamp at (−0.58, 0.59, 1.89). The baked furniture is part of the room and never appears in `objects`.
 
 | Field | Meaning |
 |---|---|

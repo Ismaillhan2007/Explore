@@ -17,6 +17,10 @@ namespace RoomVR.EditorTools
         public const string ScenePath = "Assets/_Project/Scenes/RenderedRoom.unity";
         const string Models = "Assets/_Project/Models/RenderedRoom/";
         const string Samples = "Assets/Samples/XR Interaction Toolkit/3.7.0/";
+        public const string MugName = "Mug (pickable)";
+        public const string LampName = "Bedside lamp (pickable)";
+        public const string LampPrefab = "Assets/_Project/Prefabs/Pickables/lamp.prefab";
+        public const float LampHeight = .57f;
         static GameObject Instantiate(string path)
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
@@ -76,7 +80,7 @@ namespace RoomVR.EditorTools
             RoundTable(colliders, "Coffee table", new Vector3(.65f,0,.78f), .39f,.49f);
             RoundTable(colliders, "Bedside table", new Vector3(-.53f,0,1.85f), .32f,.59f);
             var mug = Instantiate("Assets/_Project/Prefabs/Pickables/mug.prefab");
-            mug.name = "Mug — only pickable"; mug.transform.position = Vector3.zero;
+            mug.name = MugName; mug.transform.position = Vector3.zero;
             mug.transform.rotation = Quaternion.identity;
             // Preserve the prefab/model, fit the scene instance to a real 10 cm mug.
             var bounds = BoundsOf(mug);
@@ -95,6 +99,18 @@ namespace RoomVR.EditorTools
             if (!ceramic) { ceramic = new Material(Shader.Find("Universal Render Pipeline/Lit")); AssetDatabase.CreateAsset(ceramic,ceramicPath); }
             ceramic.SetColor("_BaseColor",new Color(.76f,.73f,.63f)); ceramic.SetFloat("_Smoothness",.36f);
             foreach(var renderer in mug.GetComponentsInChildren<Renderer>()) renderer.sharedMaterials = Enumerable.Repeat(ceramic,renderer.sharedMaterials.Length).ToArray();
+            // Bedside lamp: the pickable prefab replaces the lamp that used to be baked into Furnishings.
+            // Same spot as the old baked lamp (build_room.py): centre (-.58, 1.89 Blender y), on the .59 m bedside table.
+            var lamp = Instantiate(LampPrefab);
+            lamp.name = LampName; lamp.transform.position = Vector3.zero;
+            lamp.transform.rotation = Quaternion.identity;
+            bounds = BoundsOf(lamp);
+            lamp.transform.localScale *= LampHeight / bounds.size.y;
+            bounds = BoundsOf(lamp);
+            lamp.transform.position += new Vector3(-.58f-bounds.center.x, .595f-bounds.min.y, 1.89f-bounds.center.z);
+            var lampBody = lamp.GetComponent<Rigidbody>(); lampBody.interpolation = RigidbodyInterpolation.Interpolate;
+            lampBody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            lamp.GetComponent<XRGrabInteractable>().useDynamicAttach = true;
             RenderSettings.ambientMode = AmbientMode.Trilight;
             RenderSettings.ambientSkyColor = new Color(.65f,.70f,.76f);
             RenderSettings.ambientEquatorColor = new Color(.52f,.48f,.38f);
@@ -114,7 +130,7 @@ namespace RoomVR.EditorTools
             AssetDatabase.SaveAssets(); Capture(camera);
             var meshes = scene.GetRootGameObjects().SelectMany(r=>r.GetComponentsInChildren<MeshFilter>()).Select(f=>f.sharedMesh).Where(m=>m);
             Debug.Log("ROOM_MESH_TRIANGLES=" + meshes.Sum(m=>m.triangles.Length/3));
-            Debug.Log("RENDERED_ROOM_COMPLETE: exactly one mug; authored collision, XR rig and teleport floor.");
+            Debug.Log("RENDERED_ROOM_COMPLETE: pickable mug and bedside lamp; authored collision, XR rig and teleport floor.");
         }
         static Bounds BoundsOf(GameObject root)
         {

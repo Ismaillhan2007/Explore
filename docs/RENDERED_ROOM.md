@@ -2,7 +2,11 @@
 
 Open `Assets/_Project/Scenes/RenderedRoom.unity` in Unity **6000.6.7f1** and press Play. This is the first enabled build scene; `TestRoom` remains available. The existing XRI Starter Assets rig supplies tracked walking, controller locomotion, snap turning, teleportation, and near/far interaction. The included XR Device Simulator supports desktop inspection.
 
-The coffee table contains exactly one pickable: the existing `mug.prefab` from PR #1. The scene instance is fitted to 10 cm in height, with its collider fitted to the mesh, continuous physics collision, interpolation, and dynamic grab attachment. Other furniture is static. The mug prefab source remains unchanged. Its original low-poly mesh is retained, with a warm ceramic URP material on this scene instance.
+The room has two pickables:
+- **Mug** on the coffee table: the existing `mug.prefab` from PR #1. The scene instance is fitted to 10 cm in height, with its collider fitted to the mesh, continuous physics collision, interpolation, and dynamic grab attachment. The mug prefab source remains unchanged. Its original low-poly mesh is retained, with a warm ceramic URP material on this scene instance.
+- **Bedside lamp** on the bedside table: `lamp.prefab` from PR #6, placed at (−0.58, 0.595, 1.89) with continuous collision, interpolation and dynamic grab attachment. It replaces the lamp that used to be baked into `Furnishings`. That lamp and its baked "Warm lamp" light were removed from `build_room.py`, so no glow stays behind when the lamp is picked up. The lamp has no runtime light.
+
+Other furniture is static.
 
 ## Rebuilding
 
