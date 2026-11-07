@@ -1,0 +1,15 @@
+newmtl lamp_base
+Kd 0.827 0.792 0.701
+Ks 0.1 0.1 0.1
+Ns 30
+
+newmtl lamp_stem
+Kd 0.537 0.449 0.293
+Ks 0.1 0.1 0.1
+Ns 30
+
+newmtl lamp_shade
+Kd 0.916 0.838 0.687
+Ks 0.1 0.1 0.1
+Ns 30
+
