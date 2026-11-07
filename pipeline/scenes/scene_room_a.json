@@ -1,16 +1,9 @@
 {
   "version": 1,
-  "source": "hand-made placeholder; replace positions after looking at the real room A photo",
-  "room": "RoomShell_A",
-  "wallColor": "#d9c7a8",
+  "source": "hand-made to match PR #4's RenderedRoom: the mug on the coffee table, the only pickable in room 1",
+  "room": "RenderedRoom",
+  "wallColor": "#ffffff",
   "objects": [
-    { "label": "table", "model": "table_01",     "position": [0.0, 0.0, 1.5],   "rotationY": 0,   "scale": 1.0 },
-    { "label": "chair", "model": "chair_01",     "position": [-0.7, 0.0, 1.5],  "rotationY": 90,  "scale": 1.0 },
-    { "label": "chair", "model": "chair_01",     "position": [0.7, 0.0, 1.5],   "rotationY": 270, "scale": 1.0 },
-    { "label": "mug",   "model": "mug",          "position": [0.15, 0.75, 1.4], "rotationY": 30,  "scale": 1.0 },
-    { "label": "book",  "model": "book_01",      "position": [-0.2, 0.75, 1.6], "rotationY": 15,  "scale": 1.0 },
-    { "label": "box",   "model": "PickableCube", "position": [1.5, 0.0, 0.5],   "rotationY": 0,   "scale": 1.0 },
-    { "label": "lamp",  "model": "lamp_01",      "position": [-1.6, 0.0, 2.2],  "rotationY": 0,   "scale": 1.0 },
-    { "label": "plant", "model": "plant_01",     "position": [1.6, 0.0, 2.2],   "rotationY": 0,   "scale": 1.0 }
+    { "label": "mug", "model": "mug", "position": [0.80, 0.49, 0.68], "rotationY": 0, "scale": 1.0 }
   ]
 }

@@ -1,31 +1,33 @@
-"""Step 3: floor, walls, metric scale, wall colour, room shell. README section 2, step 3."""
+"""Step 3: floor, walls, metric scale, wall tint, room. README section 2, step 3."""
 from __future__ import annotations
 
 from typing import Any
 
 from .datatypes import Detection, Room
 
-CAMERA_HEIGHT_M = 1.5     # phone held at chest height
+# Same camera height PR #4 used for room 1's reference camera (RenderedRoom, y = 1.85 m).
+# Cross-check per photo: a phone held at chest height is closer to 1.4-1.6 m.
+CAMERA_HEIGHT_M = 1.85
 RANSAC_ITERS = 500
 RANSAC_THRESHOLD = 0.02   # relative units; tune on the demo photos
 WALL_MAX_UP_DOT = 0.2     # |normal . up| below this = vertical plane
-ROOM_SHELLS = {           # shell name -> floor size (width, depth) in metres; built by hand in Unity
-    "RoomShell_A": (4.0, 5.0),
-    "RoomShell_B": (3.0, 4.0),
-}
 
 
-def fit_room(points: Any, rgb: Any, detections: list[Detection]) -> Room:
-    """Fit floor and walls, fix the scale, read the wall colour, choose a shell.
+def fit_room(points: Any, rgb: Any, detections: list[Detection], library: dict) -> Room:
+    """Fit floor and walls, fix the scale, estimate the wall tint, choose a room.
 
     TODO(B):
     1. RANSAC plane on points from the bottom third of the image; normal closest to -Y = floor
     2. remove floor inliers, RANSAC again for vertical planes, keep the 1-3 largest walls
-    3. scale = CAMERA_HEIGHT_M / distance(origin, floor); cross-check with door/ceiling
-    4. wall colour = median RGB of wall inliers not inside any detection mask -> "#rrggbb"
+    3. scale = CAMERA_HEIGHT_M / distance(origin, floor); cross-check against the room's
+       known size_m in model_library.json when the room already exists (room 1)
+    4. wall tint: rooms are baked (PR #4), wallColor MULTIPLIES the baked texture.
+       Default to the room's default_tint ("#ffffff" = unchanged). Only emit another tint
+       if the photo's wall is clearly a different colour than the baked one.
     5. build cam_to_world: flip Y, floor normal -> +Y, camera forward projected on floor -> +Z,
        floor centre -> origin
-    6. choose the ROOM_SHELLS entry whose size best fits the floor/wall extent
+    6. room: for an existing room (RenderedRoom) use it; a new room needs a hand-built
+       Blender room first (tools/room/), then an entry in model_library.json
     """
     raise NotImplementedError("step 3: fit_room")
 

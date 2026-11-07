@@ -20,7 +20,11 @@ PREFAB_DIR = HERE.parent / "Assets" / "_Project" / "Prefabs" / "Pickables"
 SUPPORTED_VERSIONS = {1}
 MAX_ABS_POS = 100.0          # review checklist: outside +-100 m is absurd
 SCALE_RANGE = (0.7, 1.4)     # same clamp as step 6
+SURFACE_TOLERANCE_M = 0.02  # y should be the top of the static surface under the object
 HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+sys.path.insert(0, str(HERE))
+from steps.step5_place import resting_surface  # noqa: E402  (stdlib-only module)
 
 
 def _num(v) -> bool:
@@ -64,6 +68,8 @@ def validate(scene: dict, library: dict, strict: bool) -> tuple[list[str], list[
                 (errors if strict else warnings).append(f"{where}: model {model!r} is still planned")
             elif not (PREFAB_DIR / f"{model}.prefab").exists():
                 errors.append(f"{where}: {model}.prefab not found in Prefabs/Pickables")
+            if entry.get("kind") != "pickable":
+                errors.append(f"{where}: model {model!r} is not a pickable; static furniture is baked into the room")
             if o.get("label") and entry.get("label") and o["label"] != entry["label"]:
                 warnings.append(f"{where}: label {o['label']!r} differs from library label {entry['label']!r}")
 
@@ -75,6 +81,15 @@ def validate(scene: dict, library: dict, strict: bool) -> tuple[list[str], list[
                 errors.append(f"{where}: position {pos} outside +-{MAX_ABS_POS:g} m")
             if pos[1] < 0:
                 errors.append(f"{where}: below the floor (y = {pos[1]})")
+            room_info = rooms.get(room, {}) if isinstance(room, str) else {}
+            size = room_info.get("size_m")
+            if size and (abs(pos[0]) > size[0] / 2 or abs(pos[2]) > size[2] / 2 or pos[1] > size[1]):
+                errors.append(f"{where}: position {pos} outside room {room!r} ({size[0]} x {size[1]} x {size[2]} m)")
+            surfaces = room_info.get("surfaces")
+            if surfaces:
+                name, top = resting_surface(pos[0], pos[2], surfaces)
+                if abs(pos[1] - top) > SURFACE_TOLERANCE_M:
+                    warnings.append(f"{where}: y = {pos[1]} but the surface under it ({name}) is at {top}")
         if not _num(o.get("rotationY")):
             errors.append(f"{where}: rotationY must be a number")
         scale = o.get("scale")

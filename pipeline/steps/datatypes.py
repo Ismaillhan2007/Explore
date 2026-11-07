@@ -34,8 +34,8 @@ class Room:
     floor: Plane
     walls: list[Plane]
     scale: float             # relative depth units -> metres
-    wall_color: str          # "#rrggbb"
-    shell: str               # room shell prefab name, e.g. "RoomShell_A"
+    wall_color: str          # "#rrggbb" tint, multiplies the baked wall texture
+    name: str                # room name from model_library.json, e.g. "RenderedRoom"
     cam_to_world: Any = None  # 4x4 matrix, camera space (metres) -> Unity world space
 
 
@@ -50,7 +50,7 @@ class Detection:
 @dataclass
 class Placement:
     label: str
-    position: Vec3          # world space, metres; y = resting surface height
+    position: Vec3          # world space, metres; y = height of the surface it rests on
     rotation_y: float       # degrees
     size: Vec3              # measured width, height, depth in metres
     detection: Detection | None = None

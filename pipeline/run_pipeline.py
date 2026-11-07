@@ -27,15 +27,17 @@ HERE = Path(__file__).resolve().parent
 
 def run(photo: Path, name: str) -> Path:
     library = json.loads((HERE / "model_library.json").read_text(encoding="utf-8"))
-    labels = sorted({m["label"] for m in library["models"].values() if m.get("status") == "available"})
+    labels = sorted({m["label"] for m in library["models"].values()
+                     if m.get("status") == "available" and m.get("kind") == "pickable"})
 
-    cam, rgb = estimate_camera(str(photo))                 # 1
-    points = backproject(estimate_depth(rgb), cam)          # 2
-    detections = detect_objects(rgb, labels)                # 4 (before 3: wall colour ignores object masks)
-    room = fit_room(points, rgb, detections)                # 3
-    placements = place_objects(detections, points, room)    # 5
-    objects = match_models(placements, rgb, library)        # 6
-    scene = Scene(room=room.shell, wall_color=room.wall_color, objects=objects)
+    cam, rgb = estimate_camera(str(photo))                  # 1
+    points = backproject(estimate_depth(rgb), cam)           # 2
+    detections = detect_objects(rgb, labels)                 # 4 (before 3: wall tint ignores object masks)
+    room = fit_room(points, rgb, detections, library)        # 3
+    surfaces = library["rooms"][room.name].get("surfaces", {})
+    placements = place_objects(detections, points, room, surfaces)  # 5
+    objects = match_models(placements, rgb, library)         # 6
+    scene = Scene(room=room.name, wall_color=room.wall_color, objects=objects)
     out = write_scene(scene, HERE / "scenes" / f"scene_{name}.json")  # 7
 
     result = subprocess.run([sys.executable, str(HERE / "validate_scene.py"), str(out)])

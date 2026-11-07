@@ -21,8 +21,11 @@ def clamp_scale(measured_height_m: float, model_height_m: float) -> tuple[float,
 def match_models(placements: list[Placement], rgb: Any, library: dict) -> list[SceneObject]:
     """Pick the best library model for each placement and compute its scale.
 
+    `scale` is relative to the model's real height_m (the loader fits each instance to
+    height_m * scale), so 1.0 = a typical object of that kind.
+
     TODO(B):
-    - candidates = library models with the same label and status "available"
+    - candidates = library models with the same label, kind "pickable", status "available"
     - several candidates: CLIP (open_clip ViT-B/32) similarity between the masked crop and
       each model's thumbnail; keep the best
     - scale via clamp_scale(placement.size[1], model["height_m"]); log when not ok

@@ -18,7 +18,9 @@ def build_prompt(labels: list[str]) -> str:
 
 
 def detect_objects(rgb: Any, labels: list[str]) -> list[Detection]:
-    """Detect only objects we have models for, then segment each box.
+    """Detect only pickables we have models for, then segment each box.
+
+    Static furniture is baked into the room (PR #4), so it is not detected as an object.
 
     TODO(B):
     - run the detector with build_prompt(labels); keep score >= MIN_SCORE; per-label NMS
