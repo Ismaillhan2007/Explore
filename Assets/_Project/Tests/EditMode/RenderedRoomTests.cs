@@ -15,17 +15,59 @@ namespace RoomVR.Tests
         Scene scene;
         [SetUp] public void Open() { scene=EditorSceneManager.OpenScene(Path,OpenSceneMode.Single); }
         T[] All<T>() where T:Component => scene.GetRootGameObjects().SelectMany(r=>r.GetComponentsInChildren<T>(true)).ToArray();
-        [Test] public void ExactlyOneExistingMug_WithRealWorldSizeAndFittedCollider()
+        const string MugPrefab="Assets/_Project/Prefabs/Pickables/mug.prefab";
+        const string LampPrefab="Assets/_Project/Prefabs/Pickables/lamp.prefab";
+        static Bounds RendererBounds(Component c)
         {
-            var grabs=All<XRGrabInteractable>(); Assert.AreEqual(1,grabs.Length);
-            var mug=grabs[0];
-            Assert.AreEqual("Assets/_Project/Prefabs/Pickables/mug.prefab",PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(mug.gameObject));
-            var renderers=mug.GetComponentsInChildren<Renderer>(); var b=renderers[0].bounds;
+            var renderers=c.GetComponentsInChildren<Renderer>(); var b=renderers[0].bounds;
             foreach(var r in renderers.Skip(1)) b.Encapsulate(r.bounds);
+            return b;
+        }
+        XRGrabInteractable Pickable(string prefab)
+        {
+            var matches=All<XRGrabInteractable>().Where(g=>PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(g.gameObject)==prefab).ToArray();
+            Assert.AreEqual(1,matches.Length,"Expected exactly one instance of "+prefab);
+            return matches[0];
+        }
+        [Test] public void ExactlyTwoPickables_TheMugAndTheBedsideLamp()
+        {
+            var paths=All<XRGrabInteractable>().Select(g=>PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(g.gameObject)).OrderBy(p=>p).ToArray();
+            CollectionAssert.AreEqual(new[]{LampPrefab,MugPrefab},paths);
+        }
+        [Test] public void Mug_WithRealWorldSizeAndFittedCollider()
+        {
+            var mug=Pickable(MugPrefab);
+            var b=RendererBounds(mug);
             Assert.That(b.size.y,Is.EqualTo(.10f).Within(.002f));
             Assert.That(b.min.y,Is.EqualTo(.495f).Within(.002f));
             Assert.That(mug.GetComponent<BoxCollider>().bounds.size.y,Is.EqualTo(b.size.y).Within(.002f));
             Assert.AreEqual(CollisionDetectionMode.ContinuousDynamic,mug.GetComponent<Rigidbody>().collisionDetectionMode);
+        }
+        [Test] public void BedsideLamp_StandsOnBedsideTable_WhereTheBakedLampWas()
+        {
+            var lamp=Pickable(LampPrefab);
+            var b=RendererBounds(lamp);
+            Assert.That(b.size.y,Is.EqualTo(.57f).Within(.005f));
+            Assert.That(b.min.y,Is.EqualTo(.595f).Within(.003f),"Lamp should rest on the 0.59 m bedside table");
+            Assert.That(b.center.x,Is.EqualTo(-.58f).Within(.01f));
+            Assert.That(b.center.z,Is.EqualTo(1.89f).Within(.01f));
+            var col=lamp.GetComponent<Collider>().bounds;
+            Assert.That(col.size.y,Is.EqualTo(b.size.y).Within(.01f),"Lamp collider should match its mesh");
+            Assert.That(col.min.y,Is.EqualTo(b.min.y).Within(.005f));
+            Assert.AreEqual(CollisionDetectionMode.ContinuousDynamic,lamp.GetComponent<Rigidbody>().collisionDetectionMode);
+            Physics.SyncTransforms();
+            // Start just below the lamp's collider and above the table top, so the ray can only hit the table.
+            Assert.IsTrue(Physics.Raycast(new Vector3(-.58f,b.min.y-.001f,1.89f),Vector3.down,.05f),"No bedside table collider under the lamp");
+        }
+        [Test] public void BakedFurnishings_NoLongerContainTheBedsideLamp()
+        {
+            // The old baked lamp shade was a 0.20 m radius cylinder from 0.875 to 1.165 m high.
+            // No baked vertices may remain in that volume, or there would be two lamps.
+            // (Starts at 0.86 m so the small baked plant next to it, which tops out lower, is not counted.)
+            var root=scene.GetRootGameObjects().Single(r=>r.name.StartsWith("Furnishings"));
+            var stray=root.GetComponentsInChildren<MeshFilter>().SelectMany(f=>f.sharedMesh.vertices.Select(v=>f.transform.TransformPoint(v)))
+                .Count(v=>v.y>.86f&&v.y<1.20f&&new Vector2(v.x+.58f,v.z-1.89f).magnitude<.21f);
+            Assert.AreEqual(0,stray,"Baked lamp geometry is still in Furnishings; re-run the Blender export");
         }
         [Test] public void WalkableFloor_UsesRigTeleportLayer_AndFurnitureBlocksMovement()
         {

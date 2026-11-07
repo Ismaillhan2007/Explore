@@ -30,7 +30,8 @@ namespace RoomVR.Tests
         {
             yield return SceneManager.LoadSceneAsync("RenderedRoom");
             yield return null;
-            var mug=Object.FindFirstObjectByType<XRGrabInteractable>();
+            // The room has two pickables (mug and bedside lamp); pick the mug by name.
+            var mug=System.Array.Find(Object.FindObjectsByType<XRGrabInteractable>(FindObjectsSortMode.None),g=>g.name.StartsWith("Mug"));
             Assert.IsNotNull(mug);
             var manager=Object.FindFirstObjectByType<XRInteractionManager>();
             var hand=new GameObject("Automated test hand");

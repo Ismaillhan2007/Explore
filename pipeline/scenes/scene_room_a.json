@@ -1,9 +1,10 @@
 {
   "version": 1,
-  "source": "hand-made to match PR #4's RenderedRoom: the mug on the coffee table, the only pickable in room 1",
+  "source": "hand-made to match RenderedRoom: the mug on the coffee table and the bedside lamp on the bedside table, the two pickables in room 1",
   "room": "RenderedRoom",
   "wallColor": "#ffffff",
   "objects": [
-    { "label": "mug", "model": "mug", "position": [0.80, 0.49, 0.68], "rotationY": 0, "scale": 1.0 }
+    { "label": "mug",  "model": "mug",  "position": [0.80, 0.49, 0.68],  "rotationY": 0, "scale": 1.0 },
+    { "label": "lamp", "model": "lamp", "position": [-0.58, 0.59, 1.89], "rotationY": 0, "scale": 1.0 }
   ]
 }

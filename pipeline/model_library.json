@@ -24,6 +24,7 @@
   },
   "models": {
     "mug":          { "label": "mug", "kind": "pickable", "height_m": 0.10, "status": "available" },
+    "lamp":         { "label": "lamp", "kind": "pickable", "height_m": 0.57, "status": "available" },
     "PickableCube": { "label": "box", "kind": "pickable", "height_m": 0.20, "status": "available" }
   }
 }
