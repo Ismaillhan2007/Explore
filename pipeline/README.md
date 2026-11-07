@@ -179,7 +179,7 @@ Each run prints PASS/FAIL per check and writes `debug/<name>/depth.png`, `room_o
 1. ✅ Hand-made `scenes/scene_room_a.json` matching PR #4's room 1, so Role A can build the loader. *(This PR.)*
 2. ✅ Steps 1 + 2 → depth map image.
 3. ✅ Step 3 → floor plane, walls, ceiling, scale, graded against room 1 (on the Blender render; see results below).
-3b. ✅ Step 3 on the two living-room photos (see results). **Next:** confirm which photo is which demo room, and build room 2 in Blender from its measurements.
+3b. ✅ Step 3 on the two living-room photos (see results). Both are **new rooms**: `LivingRoomSofa` and `LivingRoomTV` in `model_library.json`, status `planned`, with the measurements as a brief. **Next:** build them in Blender like `RenderedRoom` (`tools/room/build_room.py`), then add their `size_m`, `camera`, `spawn` and `surfaces`.
 4. Step 3 on photo 2 → measurements that brief the Blender build of room 2.
 5. Step 4 → overlay masks on the photo. Tune the label prompt and threshold.
 6. Steps 5 + 6 + 7 → first automatic JSON. Compare to the hand-made one in the headset.

@@ -17,9 +17,29 @@
         "floor":         { "shape": "box",    "center": [0.0, 0.0],    "size": [4.2, 5.6],   "top_y": 0.0 }
       }
     },
-    "Room2": {
+    "LivingRoomSofa": {
       "status": "planned",
-      "source": "second demo photo; not built yet"
+      "source": "photo pipeline/photos/living_room_sofa.jpg (local only); to be built in Blender like RenderedRoom",
+      "measured": {
+        "_comment": "From run_pipeline.py --stop-after room, scaled to an assumed 2.7 m ceiling (no lens data). A brief for the Blender build, not ground truth.",
+        "camera_height_m": 1.01, "camera_pitch_down_deg": 5.8, "camera_hfov_deg": 49.5,
+        "ceiling_height_m": 2.7, "camera_to_back_wall_m": 3.11, "back_wall_angle_deg": 24,
+        "wall_paint_measured": "#c2c7c0",
+        "seen": "grey 3-seat sofa (~2.0 m) against the back wall, two framed posters above it, round wooden coffee table and drum side table, knitted pouf, floor lamp and curtained window on the left, tall plant on the right",
+        "pickable_candidates": ["cushion", "pouf", "small potted plant", "tray"]
+      }
+    },
+    "LivingRoomTV": {
+      "status": "planned",
+      "source": "photo pipeline/photos/living_room_tv.jpg (local only); to be built in Blender like RenderedRoom",
+      "measured": {
+        "_comment": "From run_pipeline.py --stop-after room, scaled to an assumed 2.7 m ceiling (no lens data). A typical 65-inch TV suggests a slightly larger room (camera 1.24 m, ceiling 3.1 m).",
+        "camera_height_m": 1.07, "camera_pitch_down_deg": 3.5, "camera_hfov_deg": 59.9,
+        "ceiling_height_m": 2.7, "camera_to_back_wall_m": 3.36, "back_wall_angle_deg": 40,
+        "wall_paint_measured": null,
+        "seen": "slatted oak TV wall with a ~65 in TV and low oak cabinet, coffered white ceiling, grey swivel armchair, woven accent chair, tiered square coffee table, gold side table, built-in shelves, window with roman blind on the left",
+        "pickable_candidates": ["book", "vase with branches", "small side-table decor"]
+      }
     }
   },
   "models": {
