@@ -1,0 +1,17 @@
+{
+  "_comment": "Single list of model names for the pipeline and the Unity loader. See pipeline/README.md section 5. height_m = real height at scale 1.0, measured from the prefab's collider in Unity.",
+  "rooms": {
+    "RoomShell_A": { "status": "planned" },
+    "RoomShell_B": { "status": "planned" }
+  },
+  "models": {
+    "PickableCube": { "label": "box",   "height_m": 0.20, "status": "available" },
+    "mug":          { "label": "mug",   "height_m": 0.10, "status": "available", "_todo": "measure height_m in Unity" },
+    "chair_01":     { "label": "chair", "height_m": 0.90, "status": "planned" },
+    "table_01":     { "label": "table", "height_m": 0.75, "status": "planned" },
+    "lamp_01":      { "label": "lamp",  "height_m": 1.50, "status": "planned" },
+    "book_01":      { "label": "book",  "height_m": 0.03, "status": "planned" },
+    "plant_01":     { "label": "plant", "height_m": 0.60, "status": "planned" },
+    "pillow_01":    { "label": "pillow","height_m": 0.15, "status": "planned" }
+  }
+}

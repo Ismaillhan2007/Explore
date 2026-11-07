@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+debug/
+# model weights never go in the repo
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx

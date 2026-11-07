@@ -1,0 +1,9 @@
+# validate_scene.py and step7 need nothing beyond the standard library.
+# Everything below is for steps 1-6. Python 3.10-3.12 recommended (PyTorch wheels).
+numpy>=1.26
+pillow>=10.0
+opencv-python>=4.9
+torch>=2.3
+transformers>=4.45      # Depth Anything V2, Grounding DINO / OWLv2
+open_clip_torch>=2.24   # step 6 model matching
+# SAM 2: pip install "git+https://github.com/facebookresearch/sam2.git"  (or use transformers' Sam2 classes)
