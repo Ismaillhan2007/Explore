@@ -21,6 +21,7 @@ WALL_MIN_POINTS = 250
 WALL_TRIES = 6
 WALL_MIN_TOP_M = 1.9      # a wall's points reach up high; most furniture doesn't
 WALL_MIN_EXTENT_M = 1.0   # and run at least 1 m along the floor
+WALL_MIN_MID_SHARE = 0.08 # and have points in both the 1.0-1.6 m and 1.6-2.2 m bands
 RANSAC_ITERS = 600
 
 
@@ -125,12 +126,16 @@ def rgb_to_hex(r: float, g: float, b: float) -> str:
 # ---------------------------------------------------------------- step 3
 
 def fit_room(points: Any, rgb: Any, detections: list[Detection], library: dict,
-             room_name: str | None = None, camera_height: float | None = None, seed: int = 0) -> Room:
+             room_name: str | None = None, camera_height: float | None = None,
+             ceiling_height: float | None = None, seed: int = 0) -> Room:
     """Floor -> scale -> world frame -> walls -> yaw/origin -> tint. See README step 3.
 
     room_name: a room from model_library.json this photo shows (room 1 = "RenderedRoom").
       Its known size and camera are used only to place the origin and to grade the result.
-    camera_height: force the scale so the camera is this high (otherwise trust metric depth).
+    Scale, in order of preference:
+      camera_height: force the scale so the camera is this high;
+      ceiling_height: force the scale so the detected ceiling is this high (needs a visible ceiling);
+      neither: trust the metric depth.
     """
     import numpy as np
 
@@ -161,8 +166,15 @@ def fit_room(points: Any, rgb: Any, detections: list[Detection], library: dict,
     # world-up in camera space has a negative z when the camera looks down
     pitch_deg = -math.degrees(math.asin(np.clip(n[2], -1, 1)))  # >0: camera looks down
 
-    # 2. Scale: metric depth by default; optionally force a camera height.
-    scale = 1.0 if camera_height is None else camera_height / cam_h_measured
+    # 2. Scale: a given camera height, else a given ceiling height, else metric depth.
+    ceiling_raw = find_ceiling(p @ n + d, cam_h_measured)   # unscaled heights above the floor
+    if camera_height is not None:
+        scale, scale_source = camera_height / cam_h_measured, f"camera height {camera_height} m (given)"
+    elif ceiling_height is not None and ceiling_raw:
+        scale, scale_source = ceiling_height / ceiling_raw, f"ceiling height {ceiling_height} m (assumed)"
+    else:
+        scale = 1.0
+        scale_source = "metric depth" + (" (no ceiling found for the ceiling prior)" if ceiling_height else "")
     p = p * scale
     d *= scale
     cam_h = float(d)
@@ -191,9 +203,14 @@ def fit_room(points: Any, rgb: Any, detections: list[Detection], library: dict,
         along = w[members][:, [0, 2]] @ np.array([ln[1], -ln[0]])
         extent = np.percentile(along, 95) - np.percentile(along, 5)
         top = float(np.percentile(w[members, 1], 90))
-        if len(members) < WALL_MIN_POINTS or top < WALL_MIN_TOP_M or extent < WALL_MIN_EXTENT_M:
+        hy = w[members, 1]
+        # A wall is continuous at mid heights. A line that joins a table top (low) and a ceiling
+        # beam (high) with nothing in between is not a wall.
+        mid = min(((hy >= 1.0) & (hy < 1.6)).mean(), ((hy >= 1.6) & (hy < 2.2)).mean())
+        if (len(members) < WALL_MIN_POINTS or top < WALL_MIN_TOP_M or extent < WALL_MIN_EXTENT_M
+                or mid < WALL_MIN_MID_SHARE):
             rejected.append({"points": int(len(members)), "top_m": round(top, 2), "extent_m": round(float(extent), 2),
-                             "distance_m": round(abs(lc), 2)})
+                             "mid_height_share": round(float(mid), 2), "distance_m": round(abs(lc), 2)})
             continue                            # furniture side, too small or too low
         walls.append({"n": ln, "c": lc, "idx": members})
 
@@ -260,6 +277,7 @@ def fit_room(points: Any, rgb: Any, detections: list[Detection], library: dict,
         "camera_height_m": round(cam_h, 3),
         "camera_height_from_depth_m": round(cam_h_measured, 3),
         "scale_applied": round(scale, 3),
+        "scale_source": scale_source,
         "camera_pitch_down_deg": round(pitch_deg, 1),
         "ceiling_height_m": round(ceiling, 2) if ceiling else None,
         "floor_inlier_share": round(float(floor_in.mean()), 3),

@@ -5,7 +5,10 @@ import math
 
 from .datatypes import Camera
 
-DEFAULT_HFOV_DEG = 65.0   # typical phone main camera, used when there is no EXIF
+DEFAULT_HFOV_DEG = 65.0   # kept for intrinsics_from_fov's default argument
+# No EXIF: assume a phone main camera, ~26 mm in 35 mm terms. Expressed as a focal length on the
+# LONG side, so it is right for portrait and landscape photos alike (a fixed horizontal FOV is not).
+DEFAULT_F35_MM = 26.0
 MAX_LONG_SIDE = 1024      # work on a downscaled image
 EXIF_IFD = 0x8769
 TAG_F35 = 0xA405          # FocalLengthIn35mmFilm
@@ -34,7 +37,7 @@ def hfov_of(cam: Camera) -> float:
 def estimate_camera(photo_path: str, hfov_deg: float | None = None) -> tuple[Camera, object, str]:
     """Load the photo, downscale to MAX_LONG_SIDE, return (camera, rgb uint8 array, source).
 
-    Priority: explicit hfov_deg (e.g. a known render camera) > EXIF 35 mm focal length > 65 deg guess.
+    Priority: explicit hfov_deg (e.g. a known render camera) > EXIF 35 mm focal length > 26 mm guess.
     `source` says which one was used, for the report.
     """
     import numpy as np
@@ -53,5 +56,6 @@ def estimate_camera(photo_path: str, hfov_deg: float | None = None) -> tuple[Cam
     elif f35:
         cam, source = intrinsics_from_f35(w, h, float(f35)), f"EXIF 35 mm focal length {float(f35):.0f} mm"
     else:
-        cam, source = intrinsics_from_fov(w, h), f"no EXIF, assumed hfov {DEFAULT_HFOV_DEG:.0f} deg"
+        cam = intrinsics_from_f35(w, h, DEFAULT_F35_MM)
+        source = f"no EXIF, assumed a {DEFAULT_F35_MM:.0f} mm (35 mm equiv.) phone lens"
     return cam, np.asarray(img), source

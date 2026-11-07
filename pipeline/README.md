@@ -52,10 +52,13 @@ Each step is one file in [`steps/`](steps/) with one public function. Data passe
 What the code does (every number below is in the report, `debug/<name>/room_report.json`):
 
 1. **Floor:** RANSAC plane fit on points from the bottom 45 % of the image, keeping only planes whose normal is within 50° of camera "up" (−Y in camera space, because image rows grow downward). Refit with least squares on all inliers. The normal is world **up**; the distance from the camera to the plane is the **camera height**; the normal's tilt is the **camera pitch**.
-2. **Scale:** by default trust the metric depth. If the camera height is known or can be assumed (`--camera-height 1.85` for room 1, ~1.5 m for a phone at chest height), scale everything so the camera is at that height. **This is the more accurate option today** (see results).
+2. **Scale**, in order of preference:
+   - **known camera height** (`--camera-height`): scale so the camera is that high. Most accurate. Room 1: 1.85 m. A phone at chest height ≈ 1.4–1.5 m; professional interior photos are shot at ≈ 1.0–1.2 m.
+   - **assumed ceiling height** (`--ceiling-height`, **default 2.7 m when the photo has no lens data**): scale so the detected ceiling is that high. Needs the ceiling in view.
+   - **metric depth** (`--metric`, or the default when the photo has EXIF lens data): trust the model. ~15 % too large on the room 1 render, 1.6–2× too large on the two living-room photos without lens data.
 3. **Floor-aligned frame:** world x = camera right, y = up, z = camera forward flattened onto the floor. Every point gets a height above the floor.
 4. **Ceiling:** the densest 10 cm band of points above the camera. Everything above it is ignored when looking for walls.
-5. **Walls:** in the floor plan (x, z), repeatedly RANSAC-fit lines through points between the floor and the ceiling. A line is a wall only if its points reach ≥ 1.9 m high and run ≥ 1 m along the floor; this rejects sofas, beds and table tops. Rejected candidates are listed in the report for tuning.
+5. **Walls:** in the floor plan (x, z), repeatedly RANSAC-fit lines through points between the floor and the ceiling. A line is a wall only if its points reach ≥ 1.9 m high, run ≥ 1 m along the floor, and are present at mid height (both 1.0–1.6 m and 1.6–2.2 m). This rejects sofas, beds, table tops, and lines that join a low table edge to a ceiling beam. Rejected candidates are listed in the report for tuning.
 6. **Yaw:** rooms are rectangular, so rotate the floor plan until the biggest wall is axis-aligned. Walls are then named left/right/back/front by which side of the camera they are on. On each side the **farthest** candidate wins: walls bound the room, furniture stands in front of them.
 7. **Origin:** for a known room (`--room RenderedRoom`), place the best-seen side wall and the back wall at their known positions, so the origin is the room centre like in Unity. For an unknown room, x is midway between two side walls if both are seen, else under the camera.
 8. **Wall tint:** the walls are a separate mesh with an unlit material whose texture already holds the plaster colour *and* the baked lighting. `wallColor` **multiplies** that texture, so `#ffffff` means "as baked". Default to the room's `default_tint`. Only emit another tint if the photo's wall is clearly a different colour, and keep it light (a dark tint also darkens the baked light).
@@ -167,7 +170,7 @@ python validate_scene.py scenes/scene_room_a.json        # stdlib only
 
 Each run prints PASS/FAIL per check and writes `debug/<name>/depth.png`, `room_overlay.png` (floor green, left wall blue, right orange, back pink) and `room_report.json`.
 
-- Put input photos in `pipeline/photos/` (`.jpg`/`.png` go through Git LFS automatically).
+- Put input photos in `pipeline/photos/`. That folder is **git-ignored**: only commit a photo you own or have permission to share (the repo is public), and then with `git add -f`.
 - Debug images (depth maps, masks, overlays) go to `pipeline/debug/`, which is not committed.
 - Model weights download to the Hugging Face cache, never into the repo.
 
@@ -176,7 +179,7 @@ Each run prints PASS/FAIL per check and writes `debug/<name>/depth.png`, `room_o
 1. ✅ Hand-made `scenes/scene_room_a.json` matching PR #4's room 1, so Role A can build the loader. *(This PR.)*
 2. ✅ Steps 1 + 2 → depth map image.
 3. ✅ Step 3 → floor plane, walls, ceiling, scale, graded against room 1 (on the Blender render; see results below).
-3b. **Next:** add the real photos to `pipeline/photos/` and run step 3 on photo 1. The render is a perfect picture; a phone photo has noise, blur and an unknown lens, so expect worse numbers.
+3b. ✅ Step 3 on the two living-room photos (see results). **Next:** confirm which photo is which demo room, and build room 2 in Blender from its measurements.
 4. Step 3 on photo 2 → measurements that brief the Blender build of room 2.
 5. Step 4 → overlay masks on the photo. Tune the label prompt and threshold.
 6. Steps 5 + 6 + 7 → first automatic JSON. Compare to the hand-made one in the headset.
@@ -189,20 +192,39 @@ The real demo photos are not in the repo yet, so steps 1–3 were tested on the 
 | Check (target) | Scale from depth model | Camera height fixed at 1.85 m | Truth |
 |---|---|---|---|
 | Camera height (± 0.25 m) | ❌ 2.14 m | (given) 1.85 m | 1.85 m |
-| Room width (± 15 %) | ✅ 4.37 m | ✅ 3.81 m | 4.20 m |
-| Camera to back wall (± 15 %) | ✅ 6.13 m | ✅ 5.36 m | 5.42 m |
+| Room width (± 15 %) | — (right wall not found) | ✅ 3.81 m | 4.20 m |
+| Camera to back wall (± 15 %) | ✅ 6.13 m | ✅ 5.08 m | 5.42 m |
 | Camera sideways position (± 0.30 m) | ❌ 1.68 m | ✅ 1.24 m | 0.95 m |
 | Ceiling height | 3.95 m | 3.42 m | 3.50 m |
 | Camera pitch | 13.8° down | 13.8° down | 12.4° down |
 | Floor flatness | ✅ 1.1 cm rms | ✅ 1.1 cm rms | flat |
-| Walls found | ✅ back, left, right | ✅ back, left, right | — |
+| Walls found | ✅ back, left | ✅ back, left, right | — |
 
 Runtime about 5 s after the first model download. The overlay, depth map and full report of the "camera height fixed" run are in [`results/`](results/).
 
 **Takeaways:**
 - The geometry (floor, walls, ceiling, angles) is solid. **Scale is the weak point**: the metric model is ~15 % too large here even after the lens correction. Use `--camera-height` whenever the photographer can say roughly how high they held the camera.
 - The right wall is seen only as a thin strip at the image edge, in line with the desk front, so its position is pulled ~30 cm inward. That is why, for a known room, the origin comes from the best-seen side wall plus the known width.
-- Not tested yet: a real phone photo, photo 2, and anything after step 3.
+- Not tested yet: anything after step 3.
+
+### Results on the two living-room photos
+
+Two real photos (`photos/living_room_sofa.jpg`, `photos/living_room_tv.jpg`, kept local, see below). Neither has lens data, so the lens is assumed (26 mm phone equivalent) and the scale comes from a 2.7 m ceiling. There is no ground truth, so the scale was **cross-checked against objects of typical size**:
+
+| | Sofa photo | TV photo |
+|---|---|---|
+| Depth model alone | camera 2.05 m, ceiling 5.48 m ❌ implausible | camera 1.97 m, ceiling 4.97 m ❌ implausible |
+| Scaled to a typical object | sofa 2.0 m wide → camera 1.03 m, ceiling 2.74 m | 65" TV 1.45 m wide → camera 1.24 m, ceiling 3.12 m |
+| **Scaled to 2.7 m ceiling (default)** | **camera 1.01 m**, back wall 3.11 m | **camera 1.07 m**, back wall 3.36 m |
+| Camera pitch | 5.8° down | 3.5° down |
+| Floor flatness | 1.8 cm rms | 2.2 cm rms |
+| Walls found | back | back (the slatted TV wall), seen at ~40° |
+
+The ceiling prior and the object check agree within 2–17 %, and both put the camera at ~1.0–1.2 m, which is how interior photographers shoot. Two fixes came from these photos: the no-EXIF lens guess now works for portrait photos (26 mm on the long side instead of a fixed horizontal angle), and walls must have points at mid height (a coffee-table edge + ceiling beam was being taken as a wall).
+
+Limits seen: only the back wall is found (side walls are hidden behind curtains or furniture, or out of frame), so room width is not measured; the measured wall colour on the TV photo is the dark wood slats and TV, not the paint.
+
+**The photos are not committed.** They look like professional photos from the web and this repo is public. Keep them in `pipeline/photos/` locally (the folder is git-ignored) unless you own them or have permission.
 
 ## 8. Known risks
 

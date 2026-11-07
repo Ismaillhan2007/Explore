@@ -29,6 +29,10 @@ TOL_SIZE_FRAC = 0.15
 TOL_CAMERA_HEIGHT_M = 0.25
 TOL_CAMERA_XZ_M = 0.30
 
+# Without lens data the metric depth is unreliable (1.6-2x too large on the two living-room
+# photos), so assume a normal ceiling instead, unless a camera height is given.
+DEFAULT_CEILING_M = 2.7
+
 
 def grade_room(report: dict, known: dict) -> list[tuple[str, str, bool]]:
     """Compare step 3's measurements with a hand-built room's known values."""
@@ -54,7 +58,7 @@ def grade_room(report: dict, known: dict) -> list[tuple[str, str, bool]]:
 
 
 def run(photo: Path, name: str, room_name: str | None, hfov: float | None,
-        camera_height: float | None, stop_after: str) -> int:
+        camera_height: float | None, ceiling_height: float | None, metric: bool, stop_after: str) -> int:
     library = json.loads((HERE / "model_library.json").read_text(encoding="utf-8"))
     debug = HERE / "debug" / name
     debug.mkdir(parents=True, exist_ok=True)
@@ -70,7 +74,9 @@ def run(photo: Path, name: str, room_name: str | None, hfov: float | None,
           f"(lens correction x{focal_correction(cam):.2f}) -> {debug / 'depth.png'}")
 
     detections = []   # step 4 is not implemented yet; wall tint then ignores no objects
-    room = fit_room(points, rgb, detections, library, room_name, camera_height)  # 3
+    if camera_height is None and ceiling_height is None and not metric and cam_source.startswith("no EXIF"):
+        ceiling_height = DEFAULT_CEILING_M
+    room = fit_room(points, rgb, detections, library, room_name, camera_height, ceiling_height)  # 3
     labels = room.report.pop("_labels")
     save_overlay(rgb, labels, str(debug / "room_overlay.png"))
     report = dict(room.report, photo=str(photo), camera_source=cam_source,
@@ -80,7 +86,8 @@ def run(photo: Path, name: str, room_name: str | None, hfov: float | None,
     report["checks"] = [{"check": c, "value": v, "pass": ok} for c, v, ok in grades]
     (debug / "room_report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
 
-    print(f"[3 room  ] walls {report['walls_found']}, camera at {report['camera_position_m']} "
+    print(f"[3 room  ] scale x{report['scale_applied']} from {report['scale_source']}")
+    print(f"           walls {report['walls_found']}, camera at {report['camera_position_m']} "
           f"(pitch {report['camera_pitch_down_deg']} deg down), wall colour {report['wall_color_measured']}")
     print(f"           overlay -> {debug / 'room_overlay.png'}, report -> {debug / 'room_report.json'}")
     if grades:
@@ -117,10 +124,13 @@ def main() -> int:
     ap.add_argument("--room", help="room from model_library.json the photo shows (enables the accuracy checks)")
     ap.add_argument("--hfov", type=float, help="horizontal field of view in degrees, if known (overrides EXIF)")
     ap.add_argument("--camera-height", type=float, help="force the scale so the camera is this high, in metres")
+    ap.add_argument("--ceiling-height", type=float, help=f"force the scale so the ceiling is this high (default {DEFAULT_CEILING_M} m when the photo has no lens data)")
+    ap.add_argument("--metric", action="store_true", help="trust the depth model's scale even without lens data")
     ap.add_argument("--stop-after", choices=["room", "all"], default="all")
     args = ap.parse_args()
     try:
-        return run(args.photo, args.name, args.room, args.hfov, args.camera_height, args.stop_after)
+        return run(args.photo, args.name, args.room, args.hfov, args.camera_height, args.ceiling_height,
+                   args.metric, args.stop_after)
     except NotImplementedError as e:
         print(f"not implemented yet: {e}")
         return 2
