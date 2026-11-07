@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "source": "hand-made to match PR #4's RenderedRoom: the mug on the coffee table, the only pickable in room 1",
+  "room": "RenderedRoom",
+  "wallColor": "#ffffff",
+  "objects": [
+    { "label": "mug", "model": "mug", "position": [0.80, 0.49, 0.68], "rotationY": 0, "scale": 1.0 }
+  ]
+}

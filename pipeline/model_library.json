@@ -1,0 +1,29 @@
+{
+  "_comment": "Single list of room and model names for the pipeline and the Unity loader. See pipeline/README.md section 5. height_m = real-world height of the object; the loader fits each instance to height_m * scale, so the prefab's own import size does not matter.",
+  "rooms": {
+    "RenderedRoom": {
+      "status": "available",
+      "source": "PR #4: hand-built in Blender (tools/room/build_room.py), scene Assets/_Project/Scenes/RenderedRoom.unity",
+      "size_m": [4.2, 3.5, 5.6],
+      "camera": { "position": [0.95, 1.85, -2.62], "vfov_deg": 73 },
+      "spawn": { "position": [1.25, 0.0, -2.25], "rotationY": -22 },
+      "default_tint": "#ffffff",
+      "surfaces": {
+        "_comment": "Static, baked furniture that pickables can rest on. Values copied from the collision proxies in BuildRenderedRoom.cs. Do not move these without a Blender rebake.",
+        "coffee_table":  { "shape": "circle", "center": [0.65, 0.78],  "radius": 0.39, "top_y": 0.49 },
+        "bedside_table": { "shape": "circle", "center": [-0.53, 1.85], "radius": 0.32, "top_y": 0.59 },
+        "desk":          { "shape": "box",    "center": [1.76, -0.69], "size": [0.68, 1.55], "top_y": 0.80 },
+        "bed":           { "shape": "box",    "center": [-1.28, -0.10], "size": [1.55, 2.40], "top_y": 0.66 },
+        "floor":         { "shape": "box",    "center": [0.0, 0.0],    "size": [4.2, 5.6],   "top_y": 0.0 }
+      }
+    },
+    "Room2": {
+      "status": "planned",
+      "source": "second demo photo; not built yet"
+    }
+  },
+  "models": {
+    "mug":          { "label": "mug", "kind": "pickable", "height_m": 0.10, "status": "available" },
+    "PickableCube": { "label": "box", "kind": "pickable", "height_m": 0.20, "status": "available" }
+  }
+}
