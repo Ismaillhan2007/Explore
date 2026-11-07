@@ -17,6 +17,7 @@ namespace RoomVR.Tests
         T[] All<T>() where T:Component => scene.GetRootGameObjects().SelectMany(r=>r.GetComponentsInChildren<T>(true)).ToArray();
         const string MugPrefab="Assets/_Project/Prefabs/Pickables/mug.prefab";
         const string LampPrefab="Assets/_Project/Prefabs/Pickables/lamp.prefab";
+        const string BookPrefab="Assets/_Project/Prefabs/Pickables/book.prefab";
         static Bounds RendererBounds(Component c)
         {
             var renderers=c.GetComponentsInChildren<Renderer>(); var b=renderers[0].bounds;
@@ -29,10 +30,10 @@ namespace RoomVR.Tests
             Assert.AreEqual(1,matches.Length,"Expected exactly one instance of "+prefab);
             return matches[0];
         }
-        [Test] public void ExactlyTwoPickables_TheMugAndTheBedsideLamp()
+        [Test] public void ExactlyThreePickables_TheMugTheBedsideLampAndTheBook()
         {
             var paths=All<XRGrabInteractable>().Select(g=>PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(g.gameObject)).OrderBy(p=>p).ToArray();
-            CollectionAssert.AreEqual(new[]{LampPrefab,MugPrefab},paths);
+            CollectionAssert.AreEqual(new[]{BookPrefab,LampPrefab,MugPrefab},paths);
         }
         [Test] public void Mug_WithRealWorldSizeAndFittedCollider()
         {
