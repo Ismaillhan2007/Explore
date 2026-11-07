@@ -57,3 +57,7 @@ Settings (IL2CPP, ARM64, Vulkan, OpenXR + Meta Quest feature, Touch controller p
 Done: project, packages, `TestRoom` scene, Quest settings, APK build, tests, git/LFS/CI setup, docs.
 Blocked: headset Developer Mode (Quest 3S is the studio's, paired to other accounts).
 Next: scene JSON format, loader, room shell and first pickable models, photo algorithm. See [TEAM.md](TEAM.md) for who does what.
+
+## Photo-inspired rendered room
+
+Open `Assets/_Project/Scenes/RenderedRoom.unity` for the furnished room with the existing pickable mug on the coffee table. It is the first enabled build scene. Blender source, rebuild commands, rendering limits and verification are in [docs/RENDERED_ROOM.md](docs/RENDERED_ROOM.md).
