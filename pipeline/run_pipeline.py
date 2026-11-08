@@ -172,8 +172,10 @@ def run(photo: Path, name: str, room_name: str | None, hfov: float | None,
     from steps.step5_place import place_objects
     from steps.step6_match import match_models
     from steps.step7_export import scene_to_dict, write_scene
-    mode = "reference camera" if "look_at" in known.get("camera", {}) else "depth (unknown room)"
-    placements = place_objects(detections, room, known, library, (cam.width, cam.height))       # 5
+    real_photo = answers is None
+    mode = ("photo camera, relative to each table" if real_photo and "photo" in known
+            else "reference camera" if "look_at" in known.get("camera", {}) else "depth (unknown room)")
+    placements = place_objects(detections, room, known, library, (cam.width, cam.height), real_photo)  # 5
     print(f"\n[5 place ] {len(placements)} placed, mode: {mode}")
     for pl in placements:
         print(f"           {pl.label:<5} on {pl.surface:<13} at ({pl.position[0]:.2f}, {pl.position[1]:.2f}, {pl.position[2]:.2f}), "

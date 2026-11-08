@@ -8,6 +8,11 @@ Two modes:
   it reaches the height of a surface top plus half the object's height. No depth estimate is used
   for the position (single-photo depth stretched the living rooms by 13-21 %); depth (step 4's
   measured base height) only helps pick between surfaces.
+* **Real photo of a built room** (rooms.<room>.photo, solved by steps/align_camera.py). The photo's
+  camera is solved from the room's architecture, but the model's furniture was placed by eye and can
+  sit ~0.5 m off. So each object is placed RELATIVE TO ITS TABLE: with the photo camera, find where
+  the table's centre (its marked pixel, at its known height) and the object are in the photo's
+  geometry, and apply that offset to the model's table.
 * **Unknown room**: use step 4's depth-based centre and base height in step 3's room frame.
 """
 from __future__ import annotations
@@ -117,6 +122,48 @@ def place_with_camera(d: Detection, model: dict, room_info: dict, width: int, he
     return p
 
 
+def surface_extent(s: dict) -> float:
+    return s["radius"] if s["shape"] == "circle" else math.hypot(*s["size"]) / 2
+
+
+def place_relative_to_photo(d: Detection, model: dict, room_info: dict, width: int, height: int) -> Placement | None:
+    """Real-photo mode: the object's offset from its table in the photo, applied to the model's table."""
+    photo = room_info["photo"]; cam = photo["camera"]
+    pw, ph = photo["image_size"]; kx, ky = width / pw, height / ph        # marked pixels are at full photo size
+    u, v = (d.box[0] + d.box[2]) / 2, (d.box[1] + d.box[3]) / 2
+    origin, direction = pixel_ray(u, v, cam, width, height)
+    h = model["height_m"]; half = min(model.get("footprint_m", [0.1, 0.1])) / 2
+    measured_base = d.size["base_m"] if d.size else None
+    surfaces = room_info.get("surfaces", {})
+    options = []
+    for name, (su, sv) in photo.get("surface_pixels", {}).items():
+        s = surfaces.get(name)
+        if s is None:
+            continue
+        so, sd = pixel_ray(su * kx, sv * ky, cam, width, height)
+        table = ray_at_height(so, sd, s["top_y"])                          # the table's centre, in the photo's geometry
+        obj = ray_at_height(origin, direction, s["top_y"] + h / 2)          # the object, if it rests on this table
+        if table is None or obj is None:
+            continue
+        dx, dz = obj[0] - table[0], obj[1] - table[1]
+        reach = math.hypot(dx, dz) / (surface_extent(s) + 0.15)              # <= 1: the object is on this table
+        if reach > 1.0:
+            continue
+        base_ok = measured_base is None or abs(measured_base - s["top_y"]) <= BASE_TOLERANCE_M
+        options.append((not base_ok, reach, name, s, dx, dz, obj[2]))
+    if not options:
+        return None
+    _, _, name, s, dx, dz, dist = sorted(options, key=lambda o: (o[0], o[1]))[0]
+    x, z = clamp_onto(s["center"][0] + dx, s["center"][1] + dz, s, half)
+    fy = (height / 2) / math.tan(math.radians(cam["vfov_deg"]) / 2)
+    size = ((d.box[2] - d.box[0]) * dist / fy, (d.box[3] - d.box[1]) * dist / fy)
+    p = Placement(label=d.label, position=(x, s["top_y"], z), rotation_y=face_camera_yaw(x, z, cam["position"]),
+                  size=(size[0], size[1], size[0]), detection=d)
+    p.surface = name
+    p.view_down_deg = math.degrees(math.asin(max(-1.0, min(1.0, -direction[1]))))
+    return p
+
+
 def place_from_depth(d: Detection, room: Room, surfaces: dict) -> Placement | None:
     """Unknown-room mode: step 4's depth-based centre and base height in step 3's room frame."""
     if not d.size:
@@ -130,17 +177,26 @@ def place_from_depth(d: Detection, room: Room, surfaces: dict) -> Placement | No
 
 
 def place_objects(detections: list[Detection], room: Room, room_info: dict, library: dict,
-                  image_size: tuple[int, int]) -> list[Placement]:
-    """One placement per detection; same-label placements closer than 10 cm are merged (best score wins)."""
+                  image_size: tuple[int, int], real_photo: bool = False) -> list[Placement]:
+    """One placement per detection; same-label placements closer than 10 cm are merged (best score wins).
+
+    real_photo: the image is the room's real photo (not a Unity render from its reference camera);
+    uses rooms.<room>.photo when it exists.
+    """
     by_label = {m["label"]: m for m in library["models"].values() if m.get("kind") == "pickable"}
-    use_camera = "camera" in room_info and "look_at" in room_info["camera"]
+    use_photo = real_photo and "photo" in room_info
+    use_camera = not use_photo and "camera" in room_info and "look_at" in room_info["camera"]
     out: list[Placement] = []
     for d in sorted(detections, key=lambda d: -d.score):
         model = by_label.get(d.label)
         if model is None:
             continue
-        p = (place_with_camera(d, model, room_info, *image_size) if use_camera
-             else place_from_depth(d, room, room_info.get("surfaces", {})))
+        if use_photo:
+            p = place_relative_to_photo(d, model, room_info, *image_size)
+        elif use_camera:
+            p = place_with_camera(d, model, room_info, *image_size)
+        else:
+            p = place_from_depth(d, room, room_info.get("surfaces", {}))
         if p is None:
             continue
         if any(q.label == p.label and math.hypot(q.position[0] - p.position[0], q.position[2] - p.position[2]) < 0.10 for q in out):
