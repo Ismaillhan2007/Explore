@@ -4,7 +4,7 @@
 numpy>=1.26
 pillow>=10.0
 torch>=2.3
-transformers>=4.45      # Depth Anything V2 Metric-Indoor (step 2); Grounding DINO / OWLv2 (step 4)
+transformers>=4.45      # Depth Anything V2 (step 2); Grounding DINO, SAM and CLIP (step 4); tested with 5.22.2
 # Not needed until steps 4-6 are built:
-# open_clip_torch>=2.24   # step 6 model matching
+# open_clip_torch>=2.24   # not needed: CLIP comes with transformers
 # SAM 2: pip install "git+https://github.com/facebookresearch/sam2.git"  (or use transformers' Sam2 classes)

@@ -37,5 +37,7 @@
       "rotationY": 0,
       "scale": 1.0
     }
-  ]
+  ],
+  "decor": [],
+  "_comment_decor": "Baked (not pickable) objects that look exactly like a pickable. Grading reports a detection on one of these as 'decor', not as a false detection; the loader ignores this field."
 }

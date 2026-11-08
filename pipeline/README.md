@@ -16,7 +16,7 @@ photo.jpg ──► [1 camera] ──► [2 depth] ──► [3 room] ──► 
                                               └── floor plane, walls, scale, wall tint ──────────────────────────┘
 ```
 
-Status: **steps 1–3 work** (camera, depth, floor/walls/scale; tested on a render of room 1, see "Results so far" below). Steps 4–6 are still stubs with their approach written down. `validate_scene.py` works. The hand-made [`scenes/scene_room_a.json`](scenes/scene_room_a.json) describes room 1 exactly as PR #4 built it, so Role A can build the loader now, without waiting for the algorithm.
+Status: **steps 1–4 work** (camera, depth, floor/walls/scale, finding the pickables; see "Results so far" and "Step 4 results" below). Steps 5–6 are still stubs with their approach written down. `validate_scene.py` works. The hand-made [`scenes/scene_room_a.json`](scenes/scene_room_a.json) describes room 1 exactly as PR #4 built it, so Role A can build the loader now, without waiting for the algorithm.
 
 ---
 
@@ -65,11 +65,16 @@ What the code does (every number below is in the report, `debug/<name>/room_repo
 9. **Room:** an existing room (room 1 → `RenderedRoom`) is used as is. A new room must first be built in Blender like PR #4. Use the measurements from this step (size, camera position, table/desk heights) as the brief, then add the room to `model_library.json`.
 
 ### Step 4 — Detect and segment objects (`steps/step4_detect.py`)
-**In:** photo, list of labels from `model_library.json`. **Out:** list of `Detection(label, score, box, mask)`.
+**In:** photo, labels from `model_library.json`, plus depth and floor from steps 2–3. **Out:** list of `Detection(label, score, box, mask, size, clip)`.
 
-- **Detect** with an open-vocabulary detector (**Grounding DINO** or **OWLv2**; YOLO-World if speed matters). Prompt it with *only the pickable labels we have models for*, e.g. `"box . mug ."`. Furniture is baked into the room and is not detected. Keep score ≥ 0.35, then per-label non-max suppression.
-- **Segment** each box with **SAM 2** (box prompt) → a clean pixel mask. Erode the mask by 2–3 px so depth at the edges (which bleeds into the background) is not used.
-- Drop tiny masks (< 0.2 % of the image) and anything not in our library.
+Three stages, each removing a different kind of mistake. All models are open weights loaded through `transformers` (no API key; ~1.5 GB downloaded once):
+
+1. **Find candidates: Grounding DINO tiny** (`IDEA-Research/grounding-dino-tiny`). Prompt built from the pickable labels (`detect` not false): `"book . table lamp . mug ."`. "table lamp" rather than "lamp" so floor lamps score lower. Runs on the **full-resolution** image (mugs are ~25 px). Score ≥ 0.30, per-label non-max suppression, boxes between 0.01 % and 25 % of the image.
+2. **Outline: SAM base** (`facebook/sam-vit-base`) with each box as the prompt → pixel mask, eroded 2 px. Masks and boxes are scaled to the working resolution of steps 2–3.
+3. **Size check** (needs steps 2–3, so it runs right after them). One robust depth per object (median inside its mask) turns the box's pixels into metres: `size = pixels × depth / focal length`. The bottom-centre pixel at that depth gives the height above the floor. Each label has `plausible` ranges in `model_library.json` (mug 5–22 cm tall; lamp 0.3–1.0 m tall **and sitting on furniture**, base ≥ 0.25 m). Rejects floor lamps (1.6 m), wall sconces (base 1.65 m), shelf vases (base 1.85 m). Measuring the mask's 3D points one by one was tried first and failed: single-photo depth blurs at small objects' edges (a 10 cm mug measured 28 cm wide).
+4. **Second opinion: CLIP** (`openai/clip-vit-base-patch32`). A padded, upscaled crop of each survivor is compared with its own phrases ("a coffee mug", "a cup") and with same-size look-alikes ("a plant pot", "a candle", "a drinking glass", …). Kept only if its own label wins and CLIP is ≥ 0.35 sure. Rejects plant pots (0.70 vs 0.00) and a candle (0.29). For books the look-alike list deliberately leaves out tray, tablet and laptop: CLIP confuses dark closed books with all three, and missing a real book is worse for us than calling a laptop a book. `--no-clip` turns this stage off.
+
+Output: `debug/<name>/detections.png` (masks, boxes, labels, answer-key crosses) and `detect_report.json` (kept with sizes, rejected with reasons, grade).
 
 ### Step 5 — Place each object in 3D (`steps/step5_place.py`)
 **In:** detections, point cloud, room. **Out:** list of `Placement(label, position, rotation_y, size)`.
@@ -181,12 +186,13 @@ Each run prints PASS/FAIL per check and writes `debug/<name>/depth.png`, `room_o
 3. ✅ Step 3 → floor plane, walls, ceiling, scale, graded against room 1 (on the Blender render; see results below).
 3b. ✅ Step 3 on the two living-room photos (see results). Both are now built rooms (`LivingRoomSofa`, PR #9; `LivingRoomTV`, PR #11) with their real `size_m`, `camera`, `spawn` and `surfaces` in `model_library.json`.
 3c. ✅ Answer keys: `scenes/scene_room_a.json`, `scene_living_room_sofa.json`, `scene_living_room_tv.json` list where every pickable really is in each built room.
-4. **Next: step 4, find the pickables** (see "Next step" below).
+4. ✅ Step 4, find the pickables (see "Step 4 results" below).
+4b. **Next:** steps 5 + 6. Step 4 already measures each pickable's centre, size and height above the floor, so step 5 is mostly snapping that to `resting_surface()` and converting to the answer-key format.
 5. Steps 5 + 6 → 3D position and model per pickable; first automatic scene JSON, graded against the answer keys.
 6. Unity loader (Role A): read a scene JSON and place the pickables, instead of positions hardcoded in each room's builder.
 7. Only then: more pickable types, better rotation, hero object via image-to-3D, live photo demo.
 
-### Next step: step 4, find the pickables
+### Step 4 plan (kept for reference; see "Step 4 results" for what was built)
 
 **Goal:** given a picture of a room, find every mug, book and lamp in it, with a clean outline (mask) of each.
 
@@ -259,6 +265,31 @@ The ceiling prior and the object check agree within 2–17 %, and both put the c
 Limits seen: only the back wall is found (side walls are hidden behind curtains or furniture, or out of frame), so room width is not measured; the measured wall colour on the TV photo is the dark wood slats and TV, not the paint.
 
 **The photos are not committed.** They look like professional photos from the web and this repo is public. Keep them in `pipeline/photos/` locally (the folder is git-ignored) unless you own them or have permission.
+
+### Step 4 results
+
+```bash
+python run_pipeline.py ../docs/living-room-sofa-unity.png --name sofa_detect --answers scenes/scene_living_room_sofa.json --stop-after detect
+python run_pipeline.py ../docs/living-room-tv-unity.png  --name tv_detect   --answers scenes/scene_living_room_tv.json   --stop-after detect
+python run_pipeline.py ../docs/room-unity.png            --name room1_detect --answers scenes/scene_room_a.json        --stop-after detect
+python run_pipeline.py photos/living_room_tv.jpg --name tv_photo --stop-after detect     # real photo, no answer key
+```
+
+With `--answers`, the run uses the room's reference camera (lens and height) from `model_library.json`, projects each answer-key object into the image and grades the result. Baked objects that look exactly like a pickable are listed under `decor` in the answer key and reported separately (step 4 can't know they're baked; in a real photo they'd be correct).
+
+| Image | Found | False detections | Notes |
+|---|---|---|---|
+| Sofa room render | ✅ **3/3** (mug 0.70, book 0.55, lamp 0.57) | **0** | floor lamp rejected by size (1.57 m); plant pot rejected by CLIP |
+| TV room render | **2/3** (book, mug) | **0** | the lamp is really hidden behind the armchair (only the top of its shade shows); candle and shelf vase rejected |
+| Room 1 render | ✅ **2/2** (mug, lamp) | **0** | the book is out of frame; the baked coffee-table book and closed notebook reported as decor |
+| Real TV photo | ✅ the book on the coffee table | 1 (ambiguous) | wall sconce rejected (base 1.65 m); a small amber glass on the side table kept as a mug |
+| Real sofa photo | nothing (correct: none of our objects) | **0** | its floor lamp rejected by CLIP |
+
+Measured sizes on the renders: mugs 10–12 cm (true 10), lamps 0.53–0.54 m (true 0.57), and the height of each object's base within ~5 cm of its table top. About 12–15 s per image (3 models, Apple GPU), after a one-time ~1.5 GB download.
+
+What it took to get here, in order: (1) detector alone found 7/8 but with 3–4 false detections per image; (2) per-point size check rejected real mugs (depth blur); (3) box-based size check fixed that and removed floor lamp/sconce/shelf vase; (4) CLIP removed same-size look-alikes (plant pots, candle); (5) look-alike lists tuned on the real TV photo, whose dark books CLIP took for a tablet/laptop.
+
+**Known limits:** occluded objects are missed; same-size, same-shape things can still pass (a glass as a mug, a laptop as a book); tested on 3 renders and 2 photos only, so the thresholds may need re-tuning on new photos. Render overlays are in `results/` (`*_detections.png`).
 
 ## 8. Known risks
 

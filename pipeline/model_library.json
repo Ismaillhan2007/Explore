@@ -15,7 +15,14 @@
           1.85,
           -2.62
         ],
-        "vfov_deg": 73
+        "vfov_deg": 73,
+        "look_at": [
+          -0.12,
+          1.05,
+          0.85
+        ],
+        "render": "docs/room-unity.png",
+        "_comment": "Reference camera of the builder (Transform.LookAt + vertical fieldOfView); docs/*-unity.png is rendered from it."
       },
       "spawn": {
         "position": [
@@ -98,7 +105,13 @@
           1.05,
           -1.75
         ],
-        "vfov_deg": 78.6
+        "vfov_deg": 78.6,
+        "look_at": [
+          -0.3,
+          0.7,
+          2.4
+        ],
+        "render": "docs/living-room-sofa-unity.png"
       },
       "spawn": {
         "position": [
@@ -183,7 +196,13 @@
           1.1,
           -1.75
         ],
-        "vfov_deg": 84.0
+        "vfov_deg": 84.0,
+        "look_at": [
+          -0.1,
+          1.05,
+          2.5
+        ],
+        "render": "docs/living-room-tv-unity.png"
       },
       "spawn": {
         "position": [
@@ -277,25 +296,69 @@
       "label": "mug",
       "kind": "pickable",
       "height_m": 0.1,
-      "status": "available"
+      "status": "available",
+      "plausible": {
+        "height_m": [
+          0.05,
+          0.22
+        ],
+        "width_m": [
+          0.04,
+          0.25
+        ],
+        "base_m": [
+          0.0,
+          1.4
+        ]
+      }
     },
     "lamp": {
       "label": "lamp",
       "kind": "pickable",
       "height_m": 0.57,
-      "status": "available"
+      "status": "available",
+      "plausible": {
+        "height_m": [
+          0.3,
+          1.0
+        ],
+        "width_m": [
+          0.15,
+          0.7
+        ],
+        "base_m": [
+          0.25,
+          1.4
+        ]
+      }
     },
     "book": {
       "label": "book",
       "kind": "pickable",
       "height_m": 0.03,
-      "status": "available"
+      "status": "available",
+      "plausible": {
+        "height_m": [
+          0.0,
+          0.15
+        ],
+        "width_m": [
+          0.1,
+          0.5
+        ],
+        "base_m": [
+          0.0,
+          1.4
+        ]
+      }
     },
     "PickableCube": {
       "label": "box",
       "kind": "pickable",
       "height_m": 0.2,
-      "status": "available"
+      "status": "available",
+      "detect": false
     }
-  }
+  },
+  "_comment_plausible": "plausible: ranges a detection's measured size must fall in (step 4 size check, using depth and the floor from steps 2-3). height = vertical extent, width = largest horizontal extent, base = height of its bottom above the floor. A table lamp sits on furniture (base >= 0.25 m), so floor lamps are rejected."
 }
