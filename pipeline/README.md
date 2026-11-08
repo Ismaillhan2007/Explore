@@ -179,11 +179,43 @@ Each run prints PASS/FAIL per check and writes `debug/<name>/depth.png`, `room_o
 1. ✅ Hand-made `scenes/scene_room_a.json` matching PR #4's room 1, so Role A can build the loader. *(This PR.)*
 2. ✅ Steps 1 + 2 → depth map image.
 3. ✅ Step 3 → floor plane, walls, ceiling, scale, graded against room 1 (on the Blender render; see results below).
-3b. ✅ Step 3 on the two living-room photos (see results). Both are **new rooms**: `LivingRoomSofa` and `LivingRoomTV` in `model_library.json`, status `planned`, with the measurements as a brief. **Next:** build them in Blender like `RenderedRoom` (`tools/room/build_room.py`), then add their `size_m`, `camera`, `spawn` and `surfaces`.
-4. Step 3 on photo 2 → measurements that brief the Blender build of room 2.
-5. Step 4 → overlay masks on the photo. Tune the label prompt and threshold.
-6. Steps 5 + 6 + 7 → first automatic JSON. Compare to the hand-made one in the headset.
-7. Only then: more pickables, better rotation, hero object via image-to-3D, live photo demo.
+3b. ✅ Step 3 on the two living-room photos (see results). Both are now built rooms (`LivingRoomSofa`, PR #9; `LivingRoomTV`, PR #11) with their real `size_m`, `camera`, `spawn` and `surfaces` in `model_library.json`.
+3c. ✅ Answer keys: `scenes/scene_room_a.json`, `scene_living_room_sofa.json`, `scene_living_room_tv.json` list where every pickable really is in each built room.
+4. **Next: step 4, find the pickables** (see "Next step" below).
+5. Steps 5 + 6 → 3D position and model per pickable; first automatic scene JSON, graded against the answer keys.
+6. Unity loader (Role A): read a scene JSON and place the pickables, instead of positions hardcoded in each room's builder.
+7. Only then: more pickable types, better rotation, hero object via image-to-3D, live photo demo.
+
+### Next step: step 4, find the pickables
+
+**Goal:** given a picture of a room, find every mug, book and lamp in it, with a clean outline (mask) of each.
+
+**Test set with known answers.** Photos of real rooms have no answer key, but our three built rooms do. Each builder saves a Unity render from a known camera with the pickables in it:
+
+| Image | Room | Pickables visible | Camera (known) |
+|---|---|---|---|
+| `docs/living-room-sofa-unity.png` | LivingRoomSofa | mug, book, lamp | `rooms.LivingRoomSofa.camera` |
+| `docs/living-room-tv-unity.png` | LivingRoomTV | book, mug, lamp (partly behind the armchair) | `rooms.LivingRoomTV.camera` |
+| `docs/room-unity.png` | RenderedRoom | mug, lamp (the book from PR #10 is on the desk, out of frame) | `rooms.RenderedRoom.camera` |
+
+Because the camera and every object's true position are known, steps 4–6 can be graded end to end: the automatic scene JSON should match the answer keys in `scenes/`. The two living-room photos (local only) are the real-world check, with no answers; there, only the book in the TV photo is one of our objects.
+
+**How:**
+1. **Detect:** Grounding DINO tiny (`IDEA-Research/grounding-dino-tiny`, open weights via `transformers`, no API key) prompted with `"mug . book . lamp ."` from `model_library.json`. Keep boxes with score ≥ 0.35; one best box per object where the scene can only have one.
+2. **Outline:** SAM (via `transformers`, e.g. `facebook/sam-vit-base`, or SAM 2 if it loads cleanly) with each box as the prompt. Erode masks by 2–3 px.
+3. **Save** `debug/<name>/detections.png` (boxes, labels, scores, masks over the image) and add the detections to the report.
+4. **Grade** with `run_pipeline.py --stop-after detect`: for each answer-key object, project its true 3D position into the image with the known camera; a detection counts if its box contains that point and the label matches.
+
+**Success criteria for step 4:**
+- On the two living-room renders: all 3 pickables found in each (the TV-room lamp may be partly hidden: found or honestly reported as missed), **no false detections**: a vase, a candle or the baked floor lamp must not count as one of our objects (see risks).
+- Masks cover the object without spilling onto the table (checked by eye on `detections.png`).
+- On the real TV photo: the book on the coffee table is found.
+- Runs in under 30 s per image on the laptop.
+
+**Risks to watch:**
+- "lamp" will also match the baked floor lamp, sconce and desk lamp. Fix with size (our lamp is 0.57 m and sits on a table; step 5 will know heights) or a stricter prompt like `"table lamp"`.
+- "book" will also match baked decor books (coffee-table books in rooms 1 and TV). Step 4 can't tell baked from pickable; that's fine for real photos, and on renders the grading only counts matches to answer-key positions.
+- Tiny objects (the mug is ~25 px wide in the renders): run detection on the full-resolution image, not the 1024 px working copy.
 
 ### Results so far (room 1 Blender render, `docs/room-blender.png`)
 
@@ -194,13 +226,15 @@ The real demo photos are not in the repo yet, so steps 1–3 were tested on the 
 | Camera height (± 0.25 m) | ❌ 2.14 m | (given) 1.85 m | 1.85 m |
 | Room width (± 15 %) | — (right wall not found) | ✅ 3.81 m | 4.20 m |
 | Camera to back wall (± 15 %) | ✅ 6.13 m | ✅ 5.08 m | 5.42 m |
-| Camera sideways position (± 0.30 m) | ❌ 1.68 m | ✅ 1.24 m | 0.95 m |
+| Camera sideways position (± 0.30 m) | ❌ 1.68 m | ✅ 1.24 m (❌ 1.28 m after PR #7's re-bake, see note) | 0.95 m |
 | Ceiling height | 3.95 m | 3.42 m | 3.50 m |
 | Camera pitch | 13.8° down | 13.8° down | 12.4° down |
 | Floor flatness | ✅ 1.1 cm rms | ✅ 1.1 cm rms | flat |
 | Walls found | ✅ back, left | ✅ back, left, right | — |
 
-Runtime about 5 s after the first model download. The overlay, depth map and full report of the "camera height fixed" run are in [`results/`](results/).
+Runtime about 5 s after the first model download.
+
+Note: PR #7 re-baked room 1 without the baked bedside lamp, which changed `docs/room-blender.png`. On the new render the sideways camera position comes out at 1.28 m, 3 cm outside the ±0.30 m target; everything else still passes. Worth a look when tuning wall detection; not a regression in the code. The overlay, depth map and full report of the "camera height fixed" run are in [`results/`](results/).
 
 **Takeaways:**
 - The geometry (floor, walls, ceiling, angles) is solid. **Scale is the weak point**: the metric model is ~15 % too large here even after the lens correction. Use `--camera-height` whenever the photographer can say roughly how high they held the camera.
