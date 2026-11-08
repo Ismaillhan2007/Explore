@@ -60,6 +60,7 @@ namespace RoomVR.Tests
         // and after release it must land back on its table, upright.
         [UnityTest] public IEnumerator MugIsGrabbableByAHand() { yield return GrabLiftRelease("Mug",.49f); }
         [UnityTest] public IEnumerator BedsideLampIsGrabbableByAHand() { yield return GrabLiftRelease("Bedside lamp",.59f); }
+        [UnityTest] public IEnumerator BookOnTheDeskIsGrabbableByAHand() { yield return GrabLiftRelease("Book",.80f); }
 
         static IEnumerator GrabLiftRelease(string namePrefix,float surfaceY)
         {

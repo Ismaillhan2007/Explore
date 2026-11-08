@@ -60,6 +60,21 @@ namespace RoomVR.Tests
             // Start just below the lamp's collider and above the table top, so the ray can only hit the table.
             Assert.IsTrue(Physics.Raycast(new Vector3(-.58f,b.min.y-.001f,1.89f),Vector3.down,.05f),"No bedside table collider under the lamp");
         }
+        [Test] public void Book_RestsOnTheDesk_BesideTheLaptop()
+        {
+            // Placed by BuildRenderedRoom.cs (originally added by hand in PR #10), so a rebuild keeps it.
+            var book=Pickable(BookPrefab);
+            var b=RendererBounds(book);
+            Assert.That(b.min.y,Is.EqualTo(.805f).Within(.003f),"Book should rest on the 0.80 m desk");
+            Assert.That(b.center.x,Is.EqualTo(1.57f).Within(.01f));
+            Assert.That(b.center.z,Is.EqualTo(-1.29f).Within(.01f));
+            // Inside the desk top (x 1.42..2.10, z -1.465..0.085) and clear of the baked laptop (z -1.09..-0.83).
+            Assert.That(b.min.x,Is.GreaterThanOrEqualTo(1.42f)); Assert.That(b.max.x,Is.LessThanOrEqualTo(2.10f));
+            Assert.That(b.min.z,Is.GreaterThanOrEqualTo(-1.465f)); Assert.That(b.max.z,Is.LessThan(-1.09f),"Book overlaps the baked laptop");
+            Assert.AreEqual(CollisionDetectionMode.ContinuousDynamic,book.GetComponent<Rigidbody>().collisionDetectionMode);
+            Physics.SyncTransforms();
+            Assert.IsTrue(Physics.Raycast(new Vector3(b.center.x,b.min.y-.001f,b.center.z),Vector3.down,.05f),"No desk collider under the book");
+        }
         [Test] public void BakedFurnishings_NoLongerContainTheBedsideLamp()
         {
             // The old baked lamp shade was a 0.20 m radius cylinder from 0.875 to 1.165 m high.
