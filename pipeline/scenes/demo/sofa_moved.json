@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "source": "demo layout with the pickables moved: the mug on the pouf, the book at the front of the coffee table; rendered to docs/demo/sofa-moved-unity.png",
+  "room": "LivingRoomSofa",
+  "wallColor": "#ffffff",
+  "objects": [
+    {
+      "label": "mug",
+      "model": "mug",
+      "position": [
+        0.95,
+        0.38,
+        0.38
+      ],
+      "rotationY": 0,
+      "scale": 1.0
+    },
+    {
+      "label": "book",
+      "model": "book",
+      "position": [
+        0.05,
+        0.42,
+        0.7
+      ],
+      "rotationY": 30,
+      "scale": 1.0
+    },
+    {
+      "label": "lamp",
+      "model": "lamp",
+      "position": [
+        -1.0,
+        0.53,
+        0.95
+      ],
+      "rotationY": 0,
+      "scale": 1.0
+    }
+  ]
+}

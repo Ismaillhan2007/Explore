@@ -1,0 +1,14 @@
+{
+  "name": "RoomVR.Runtime",
+  "rootNamespace": "RoomVR",
+  "references": ["Unity.XR.Interaction.Toolkit"],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

@@ -1,14 +1,21 @@
 {
   "name": "RoomVR.PlayModeTests",
-  "references": ["Unity.XR.Interaction.Toolkit"],
-  "optionalUnityReferences": ["TestAssemblies"],
+  "references": [
+    "Unity.XR.Interaction.Toolkit",
+    "RoomVR.Runtime"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,
   "overrideReferences": false,
   "precompiledReferences": [],
   "autoReferenced": false,
-  "defineConstraints": ["UNITY_INCLUDE_TESTS"],
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
   "versionDefines": [],
   "noEngineReferences": false
 }

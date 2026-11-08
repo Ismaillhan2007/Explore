@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "source": "demo layout with the pickables moved: the mug on the coffee table, the book on the brass side table; rendered to docs/demo/tv-moved-unity.png",
+  "room": "LivingRoomTV",
+  "wallColor": "#ffffff",
+  "objects": [
+    {
+      "label": "mug",
+      "model": "mug",
+      "position": [
+        0.0,
+        0.42,
+        0.3
+      ],
+      "rotationY": 0,
+      "scale": 1.0
+    },
+    {
+      "label": "book",
+      "model": "book",
+      "position": [
+        0.1,
+        0.55,
+        1.6
+      ],
+      "rotationY": 20,
+      "scale": 1.0
+    },
+    {
+      "label": "lamp",
+      "model": "lamp",
+      "position": [
+        -0.25,
+        0.55,
+        2.24
+      ],
+      "rotationY": 0,
+      "scale": 1.0
+    }
+  ]
+}
