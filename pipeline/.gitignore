@@ -9,3 +9,4 @@ debug/
 *.safetensors
 *.onnx
 photos/
+scenes/generated/scene_ui_*.json

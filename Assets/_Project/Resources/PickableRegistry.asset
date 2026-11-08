@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eef95bbb99bc24151b0db66b3bb128f6, type: 3}
+  m_Name: PickableRegistry
+  m_EditorClassIdentifier: RoomVR.Runtime::RoomVR.PickableRegistry
+  entries:
+  - model: mug
+    prefab: {fileID: 8282922426452046602, guid: 6254c8ec1556c4260b0c32439cbbdde3, type: 3}
+    heightM: 0.1
+    fitToHeight: 1
+  - model: lamp
+    prefab: {fileID: 1315911708929214945, guid: 7d2fc605a09e242f091a1c63eaa7066e, type: 3}
+    heightM: 0.57
+    fitToHeight: 1
+  - model: book
+    prefab: {fileID: 5860360152796033973, guid: 882bbd0553ad80b40a6b52f3732bd1fd, type: 3}
+    heightM: 0.03
+    fitToHeight: 0
+  - model: PickableCube
+    prefab: {fileID: 5860360152796033973, guid: a5b65fc932482471b9b3356e5f40339b, type: 3}
+    heightM: 0.2
+    fitToHeight: 1

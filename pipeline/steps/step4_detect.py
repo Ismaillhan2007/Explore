@@ -224,7 +224,9 @@ LOOKALIKES = {
     "mug": ["a plant pot", "a small potted plant", "a candle", "a candle holder", "a drinking glass", "a vase", "a bowl", "a jar"],
     # Not "a tray", "a tablet" or "a laptop": CLIP confuses dark closed books with all three, and missing a
     # real book is worse for us than calling a laptop a book (the size check still applies).
-    "book": ["a cardboard box", "a cushion", "a picture frame"],
+    # Not "a cardboard box" either: our book prefab is a plain cover-coloured box, and turned at an angle
+    # CLIP rated it "a cardboard box" 0.59 vs 0.28. The size check (<= 15 cm tall, 10-50 cm wide) limits what passes.
+    "book": ["a cushion", "a picture frame"],
     # Not "a floor lamp" or "a chair": CLIP judges the padded crop, and next to a TV or a chair it
     # called our table lamp a floor lamp (0.32 vs 0.16) and then a chair (0.37 vs 0.24). Geometry
     # rejects both instead: floor lamps are too tall or a tall thin box (aspect), chairs stand on

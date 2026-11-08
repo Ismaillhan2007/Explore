@@ -1,19 +1,16 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
 namespace RoomVR.EditorTools
 {
     /// <summary>
-    /// CHECK TOOL for the photo pipeline, not the runtime loader: opens the room named in a scene JSON
-    /// (pipeline/scenes/*.json), removes the room's own pickables, places the JSON's pickables the way
-    /// the loader should (fit to height_m * scale, rest on y, turn by rotationY), renders the room's
-    /// reference camera to a PNG and closes the scene WITHOUT saving.
+    /// CHECK TOOL for the photo pipeline: opens the room named in a scene JSON (pipeline/scenes/*.json),
+    /// places the JSON's pickables with the same code as Play mode (RoomVR.PickableSceneLoader), renders the
+    /// room's reference camera to a PNG and closes the scene WITHOUT saving.
     ///
     /// Batch: Unity -batchmode -quit -projectPath . -executeMethod RoomVR.EditorTools.PipelineScenePreview.Run
     ///        -sceneJson pipeline/debug/x/scene_x.json -out pipeline/debug/x/unity_preview.png
@@ -22,12 +19,6 @@ namespace RoomVR.EditorTools
     /// </summary>
     public static class PipelineScenePreview
     {
-        [Serializable] class SceneObject { public string label; public string model; public float[] position; public float rotationY; public float scale = 1; }
-        [Serializable] class SceneJson { public int version; public string room; public SceneObject[] objects; }
-
-        const string Pickables = "Assets/_Project/Prefabs/Pickables/";
-        const string Library = "pipeline/model_library.json";
-
         public static void Run()
         {
             var args = Environment.GetCommandLineArgs();
@@ -46,28 +37,14 @@ namespace RoomVR.EditorTools
         public static void Preview(string sceneJsonPath, string outputPng, string cameraPos = null, string lookAt = null,
                                    string vfov = null, string size = null)
         {
-            var data = JsonUtility.FromJson<SceneJson>(File.ReadAllText(sceneJsonPath));
+            var data = PickableSceneLoader.Parse(File.ReadAllText(sceneJsonPath));
             var scenePath = "Assets/_Project/Scenes/" + data.room + ".unity";
             if (!File.Exists(scenePath)) throw new InvalidOperationException("No scene for room " + data.room);
             var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
-            foreach (var g in scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<XRGrabInteractable>(true)).ToArray())
-                UnityEngine.Object.DestroyImmediate(g.gameObject);
-            var library = File.ReadAllText(Library);
-            foreach (var o in data.objects)
-            {
-                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(Pickables + o.model + ".prefab");
-                if (!prefab) { Debug.LogWarning("PIPELINE_PREVIEW: no prefab for model " + o.model); continue; }
-                var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
-                go.name = o.label + " (from scene JSON)";
-                go.transform.SetPositionAndRotation(Vector3.zero, Quaternion.Euler(0, o.rotationY, 0));
-                var b = Bounds(go);
-                var height = HeightOf(library, o.model);
-                if (height > 0 && o.model != "book") { go.transform.localScale *= height * o.scale / b.size.y; b = Bounds(go); }
-                else if (o.scale > 0) { go.transform.localScale *= o.scale; b = Bounds(go); }
-                var p = new Vector3(o.position[0], o.position[1], o.position[2]);
-                go.transform.position += new Vector3(p.x - b.center.x, p.y + .005f - b.min.y, p.z - b.center.z);
-                Debug.Log($"PIPELINE_PREVIEW: {o.model} at {go.transform.position} height {Bounds(go).size.y:F3}");
-            }
+            var registry = AssetDatabase.LoadAssetAtPath<PickableRegistry>(PickableRegistryBuilder.AssetPath);
+            if (!registry) { PickableRegistryBuilder.Run(); registry = AssetDatabase.LoadAssetAtPath<PickableRegistry>(PickableRegistryBuilder.AssetPath); }
+            foreach (var go in PickableSceneLoader.Apply(scene, data, registry, true, p => (GameObject)PrefabUtility.InstantiatePrefab(p)))
+                Debug.Log($"PIPELINE_PREVIEW: {go.name} at {go.transform.position} height {Bounds(go).size.y:F3}");
             var camera = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Camera>(true))
                               .First(c => c.name.StartsWith("Reference preview camera"));
             int w = 0, h = 0;
@@ -81,12 +58,6 @@ namespace RoomVR.EditorTools
             Capture(camera, outputPng, w, h);
             Debug.Log("PIPELINE_PREVIEW_COMPLETE: " + outputPng);
             EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);   // discard, never save
-        }
-
-        static float HeightOf(string library, string model)
-        {
-            var m = Regex.Match(library, "\"" + Regex.Escape(model) + "\"\\s*:\\s*\\{[^}]*?\"height_m\"\\s*:\\s*([0-9.]+)");
-            return m.Success ? float.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture) : 0;
         }
 
         static Bounds Bounds(GameObject root)

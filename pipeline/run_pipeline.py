@@ -99,14 +99,16 @@ def report_detect(detections, rejected, rgb, cam, library, debug: Path, answers:
 
 def run(photo: Path, name: str, room_name: str | None, hfov: float | None,
         camera_height: float | None, ceiling_height: float | None, metric: bool, stop_after: str,
-        answers: Path | None = None, min_score: float = 0.30, no_clip: bool = False) -> int:
+        answers: Path | None = None, min_score: float = 0.30, no_clip: bool = False, render: bool = False) -> int:
     library = json.loads((HERE / "model_library.json").read_text(encoding="utf-8"))
     debug = HERE / "debug" / name
     debug.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
 
-    if answers:   # a render from a built room's reference camera: use that camera's real lens and height
-        answer_room = json.loads(Path(answers).read_text(encoding="utf-8"))["room"]
+    if answers or render:   # a render from a built room's reference camera: use that camera's real lens and height
+        answer_room = json.loads(Path(answers).read_text(encoding="utf-8"))["room"] if answers else room_name
+        if not answer_room or answer_room not in library["rooms"]:
+            raise SystemExit("--render needs --room <a built room from model_library.json>")
         ref = library["rooms"][answer_room]["camera"]
         room_name = room_name or answer_room
         if hfov is None:
@@ -172,7 +174,7 @@ def run(photo: Path, name: str, room_name: str | None, hfov: float | None,
     from steps.step5_place import place_objects
     from steps.step6_match import match_models
     from steps.step7_export import scene_to_dict, write_scene
-    real_photo = answers is None
+    real_photo = answers is None and not render
     mode = ("photo camera, relative to each table" if real_photo and "photo" in known
             else "reference camera" if "look_at" in known.get("camera", {}) else "depth (unknown room)")
     placements = place_objects(detections, room, known, library, (cam.width, cam.height), real_photo)  # 5
@@ -226,6 +228,8 @@ def main() -> int:
     ap.add_argument("--metric", action="store_true", help="trust the depth model's scale even without lens data")
     ap.add_argument("--stop-after", choices=["detect", "room", "all"], default="all",
                     help="room: steps 1-3; detect: steps 1-4; all: everything")
+    ap.add_argument("--render", action="store_true", help="the image is a Unity render of --room from its reference camera "
+                    "(e.g. with objects moved): exact placement, no answer key needed")
     ap.add_argument("--answers", type=Path, help="answer-key scene JSON (scenes/*.json) to grade step 4 against; "
                     "only valid for a render taken from the room's reference camera")
     ap.add_argument("--min-score", type=float, default=0.30, help="detector score threshold")
@@ -233,7 +237,7 @@ def main() -> int:
     args = ap.parse_args()
     try:
         return run(args.photo, args.name, args.room, args.hfov, args.camera_height, args.ceiling_height,
-                   args.metric, args.stop_after, args.answers, args.min_score, args.no_clip)
+                   args.metric, args.stop_after, args.answers, args.min_score, args.no_clip, args.render)
     except NotImplementedError as e:
         print(f"not implemented yet: {e}")
         return 2
