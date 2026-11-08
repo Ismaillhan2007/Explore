@@ -21,6 +21,8 @@ namespace RoomVR.EditorTools
         public const string LampName = "Bedside lamp (pickable)";
         public const string LampPrefab = "Assets/_Project/Prefabs/Pickables/lamp.prefab";
         public const float LampHeight = .57f;
+        public const string BookName = "Book (pickable)";
+        public const string BookPrefab = "Assets/_Project/Prefabs/Pickables/book.prefab";
         static GameObject Instantiate(string path)
         {
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
@@ -111,6 +113,16 @@ namespace RoomVR.EditorTools
             var lampBody = lamp.GetComponent<Rigidbody>(); lampBody.interpolation = RigidbodyInterpolation.Interpolate;
             lampBody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             lamp.GetComponent<XRGrabInteractable>().useDynamicAttach = true;
+            // Book on the desk (added to the scene by hand in PR #10; placed here so a rebuild keeps it).
+            // Desk top is .80 m; same spot as PR #10: centre x 1.57, z -1.29, beside the baked laptop.
+            var book = Instantiate(BookPrefab);
+            book.name = BookName; book.transform.position = Vector3.zero;
+            book.transform.rotation = Quaternion.identity;
+            bounds = BoundsOf(book);
+            book.transform.position += new Vector3(1.57f-bounds.center.x, .805f-bounds.min.y, -1.29f-bounds.center.z);
+            var bookBody = book.GetComponent<Rigidbody>(); bookBody.interpolation = RigidbodyInterpolation.Interpolate;
+            bookBody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            book.GetComponent<XRGrabInteractable>().useDynamicAttach = true;
             RenderSettings.ambientMode = AmbientMode.Trilight;
             RenderSettings.ambientSkyColor = new Color(.65f,.70f,.76f);
             RenderSettings.ambientEquatorColor = new Color(.52f,.48f,.38f);
@@ -130,7 +142,7 @@ namespace RoomVR.EditorTools
             AssetDatabase.SaveAssets(); Capture(camera);
             var meshes = scene.GetRootGameObjects().SelectMany(r=>r.GetComponentsInChildren<MeshFilter>()).Select(f=>f.sharedMesh).Where(m=>m);
             Debug.Log("ROOM_MESH_TRIANGLES=" + meshes.Sum(m=>m.triangles.Length/3));
-            Debug.Log("RENDERED_ROOM_COMPLETE: pickable mug and bedside lamp; authored collision, XR rig and teleport floor.");
+            Debug.Log("RENDERED_ROOM_COMPLETE: pickable mug, bedside lamp and book; authored collision, XR rig and teleport floor.");
         }
         static Bounds BoundsOf(GameObject root)
         {
