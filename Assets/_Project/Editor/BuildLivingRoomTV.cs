@@ -14,7 +14,7 @@ namespace RoomVR.EditorTools
     /// <summary>
     /// Generates LivingRoomTV.unity from the Blender bake of tools/room/build_living_room_tv.py,
     /// the same way BuildRenderedRoom does for room 1. Room 4.6 x 5.0 x 3.0 m, centred on the origin.
-    /// Pickables: book on the tiered coffee table, mug on the brass side table, lamp on the TV cabinet.
+    /// Pickables: book on the tiered coffee table, mug on the brass side table, lamp on the left end of the TV cabinet.
     /// </summary>
     public static class BuildLivingRoomTV
     {
@@ -92,7 +92,9 @@ namespace RoomVR.EditorTools
             var ceramic = AssetDatabase.LoadAssetAtPath<Material>("Assets/_Project/Models/RenderedRoom/MugCeramic.mat");
             if (ceramic) foreach (var r in mug.GetComponentsInChildren<Renderer>()) r.sharedMaterials = Enumerable.Repeat(ceramic, r.sharedMaterials.Length).ToArray();
             Pickable("book.prefab", "Book (pickable)", 0, new Vector3(-.05f, CoffeeTable.y, -.12f), -15, fitCollider: false);
-            Pickable("lamp.prefab", "Table lamp (pickable)", .57f, new Vector3(1.52f, Cabinet.y, Cabinet.z), 0, fitCollider: false);
+            // Left end of the cabinet: visible from the start view (on the right end it hid behind the armchair).
+            // At x -0.25 the 0.40 m shade stays 7 cm in front of the TV panel's plane and within the cabinet top.
+            Pickable("lamp.prefab", "Table lamp (pickable)", .57f, new Vector3(-.25f, Cabinet.y, Cabinet.z), 0, fitCollider: false);
 
             // Real-time light only for the movable pickables; the room's light is baked.
             RenderSettings.ambientMode = AmbientMode.Trilight;

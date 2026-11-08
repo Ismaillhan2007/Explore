@@ -42,7 +42,7 @@ Each step is one file in [`steps/`](steps/) with one public function. Data passe
 **In:** photo, camera. **Out:** `depth[H, W]` in metres.
 
 - Run **Depth Anything V2 Metric-Indoor Small** (`depth-anything/Depth-Anything-V2-Metric-Indoor-Small-hf`). It outputs metres directly, so scale is something we can measure and check, not only assume. About 5 s per photo on a MacBook (Apple GPU), ~100 MB download the first time.
-- **Lens correction:** the model learned distances from 60° field-of-view images (Hypersim). A wider lens makes everything look smaller, so it guesses too far. Multiply depth by `(fx/width) / (fx/width at 60°)`. On the room 1 render (73° lens) this is ×0.78 and cut the scale error from ~49 % to ~15 %.
+- **Lens correction:** the model learned distances from 60° field-of-view images (Hypersim, 1024 × 768). A wider lens makes everything look smaller, so it guesses too far. Multiply depth by `(fx / short side) / (fx / short side at training)`. **Short side**, because the model's processor scales every image's short side to 518 px whatever the orientation (683 × 1024 → 518 × 770). The first version divided by the width, which made portrait photos 4/3 too deep; fixing it changed depth-only camera heights on the three portrait Unity renders from +76 / +59 / +24 % to +31 / +21 / −7 %.
 - Back-project every pixel to a 3D point in camera space:
   `X = (u − cx) · Z / fx`, `Y = (v − cy) · Z / fy`, `Z = depth(u, v)`.
 
@@ -55,7 +55,7 @@ What the code does (every number below is in the report, `debug/<name>/room_repo
 2. **Scale**, in order of preference:
    - **known camera height** (`--camera-height`): scale so the camera is that high. Most accurate. Room 1: 1.85 m. A phone at chest height ≈ 1.4–1.5 m; professional interior photos are shot at ≈ 1.0–1.2 m.
    - **assumed ceiling height** (`--ceiling-height`, **default 2.7 m when the photo has no lens data**): scale so the detected ceiling is that high. Needs the ceiling in view.
-   - **metric depth** (`--metric`, or the default when the photo has EXIF lens data): trust the model. ~15 % too large on the room 1 render, 1.6–2× too large on the two living-room photos without lens data.
+   - **metric depth** (`--metric`, or the default when the photo has EXIF lens data): trust the model. After the lens-correction fix: −7 % to +31 % on the three Unity renders, −13 % on the room 1 Blender render. Too rough to rely on alone.
 3. **Floor-aligned frame:** world x = camera right, y = up, z = camera forward flattened onto the floor. Every point gets a height above the floor.
 4. **Ceiling:** the densest 10 cm band of points above the camera. Everything above it is ignored when looking for walls.
 5. **Walls:** in the floor plan (x, z), repeatedly RANSAC-fit lines through points between the floor and the ceiling. A line is a wall only if its points reach ≥ 1.9 m high, run ≥ 1 m along the floor, and are present at mid height (both 1.0–1.6 m and 1.6–2.2 m). This rejects sofas, beds, table tops, and lines that join a low table edge to a ceiling beam. Rejected candidates are listed in the report for tuning.
@@ -71,8 +71,8 @@ Three stages, each removing a different kind of mistake. All models are open wei
 
 1. **Find candidates: Grounding DINO tiny** (`IDEA-Research/grounding-dino-tiny`). Prompt built from the pickable labels (`detect` not false): `"book . table lamp . mug ."`. "table lamp" rather than "lamp" so floor lamps score lower. Runs on the **full-resolution** image (mugs are ~25 px). Score ≥ 0.30, per-label non-max suppression, boxes between 0.01 % and 25 % of the image.
 2. **Outline: SAM base** (`facebook/sam-vit-base`) with each box as the prompt → pixel mask, eroded 2 px. Masks and boxes are scaled to the working resolution of steps 2–3.
-3. **Size check** (needs steps 2–3, so it runs right after them). One robust depth per object (median inside its mask) turns the box's pixels into metres: `size = pixels × depth / focal length`. The bottom-centre pixel at that depth gives the height above the floor. Each label has `plausible` ranges in `model_library.json` (mug 5–22 cm tall; lamp 0.3–1.0 m tall **and sitting on furniture**, base ≥ 0.25 m). Rejects floor lamps (1.6 m), wall sconces (base 1.65 m), shelf vases (base 1.85 m). Measuring the mask's 3D points one by one was tried first and failed: single-photo depth blurs at small objects' edges (a 10 cm mug measured 28 cm wide).
-4. **Second opinion: CLIP** (`openai/clip-vit-base-patch32`). A padded, upscaled crop of each survivor is compared with its own phrases ("a coffee mug", "a cup") and with same-size look-alikes ("a plant pot", "a candle", "a drinking glass", …). Kept only if its own label wins and CLIP is ≥ 0.35 sure. Rejects plant pots (0.70 vs 0.00) and a candle (0.29). For books the look-alike list deliberately leaves out tray, tablet and laptop: CLIP confuses dark closed books with all three, and missing a real book is worse for us than calling a laptop a book. `--no-clip` turns this stage off.
+3. **Size check** (needs steps 2–3, so it runs right after them). One robust depth per object (median inside its mask) turns the box's pixels into metres: `size = pixels × depth / focal length`. The bottom-centre pixel at that depth gives the height above the floor. Each label has `plausible` ranges in `model_library.json` (mug 5–22 cm tall; lamp 0.3–1.0 m tall, **sitting on furniture** (base ≥ 0.25 m) and **not a tall thin box** (height ≤ 3 × width: a table lamp is ~1.5, the visible top of a floor lamp ~5)). Rejects floor lamps (1.6 m tall, or aspect 4–5), wall sconces (base 1.65 m), shelf vases (base 1.85 m). Measuring the mask's 3D points one by one was tried first and failed: single-photo depth blurs at small objects' edges (a 10 cm mug measured 28 cm wide).
+4. **Second opinion: CLIP** (`openai/clip-vit-base-patch32`). A padded, upscaled crop of each survivor is compared with its own phrases ("a coffee mug", "a cup") and with same-size look-alikes ("a plant pot", "a candle", "a drinking glass", …). Kept only if its own label wins and CLIP is ≥ 0.35 sure. Rejects plant pots (0.70 vs 0.00) and a candle (0.29). For books the look-alike list deliberately leaves out tray, tablet and laptop: CLIP confuses dark closed books with all three, and missing a real book is worse for us than calling a laptop a book. For lamps it leaves out floor lamp and chair: CLIP judges the padded crop, and next to a TV or a chair it called our table lamp a floor lamp (0.32 vs 0.16) and then a chair (0.37 vs 0.24); geometry rejects both instead. `--no-clip` turns this stage off.
 
 Output: `debug/<name>/detections.png` (masks, boxes, labels, answer-key crosses) and `detect_report.json` (kept with sizes, rejected with reasons, grade).
 
@@ -201,7 +201,7 @@ Each run prints PASS/FAIL per check and writes `debug/<name>/depth.png`, `room_o
 | Image | Room | Pickables visible | Camera (known) |
 |---|---|---|---|
 | `docs/living-room-sofa-unity.png` | LivingRoomSofa | mug, book, lamp | `rooms.LivingRoomSofa.camera` |
-| `docs/living-room-tv-unity.png` | LivingRoomTV | book, mug, lamp (partly behind the armchair) | `rooms.LivingRoomTV.camera` |
+| `docs/living-room-tv-unity.png` | LivingRoomTV | book, mug, lamp (moved to the left end of the TV cabinet so it is visible; it used to hide behind the armchair) | `rooms.LivingRoomTV.camera` |
 | `docs/room-unity.png` | RenderedRoom | mug, lamp (the book from PR #10 is on the desk, out of frame) | `rooms.RenderedRoom.camera` |
 
 Because the camera and every object's true position are known, steps 4–6 can be graded end to end: the automatic scene JSON should match the answer keys in `scenes/`. The two living-room photos (local only) are the real-world check, with no answers; there, only the book in the TV photo is one of our objects.
@@ -213,7 +213,7 @@ Because the camera and every object's true position are known, steps 4–6 can b
 4. **Grade** with `run_pipeline.py --stop-after detect`: for each answer-key object, project its true 3D position into the image with the known camera; a detection counts if its box contains that point and the label matches.
 
 **Success criteria for step 4:**
-- On the two living-room renders: all 3 pickables found in each (the TV-room lamp may be partly hidden: found or honestly reported as missed), **no false detections**: a vase, a candle or the baked floor lamp must not count as one of our objects (see risks).
+- On the two living-room renders: all 3 pickables found in each, **no false detections**: a vase, a candle or the baked floor lamp must not count as one of our objects (see risks).
 - Masks cover the object without spilling onto the table (checked by eye on `detections.png`).
 - On the real TV photo: the book on the coffee table is found.
 - Runs in under 30 s per image on the laptop.
@@ -243,7 +243,7 @@ Runtime about 5 s after the first model download.
 Note: PR #7 re-baked room 1 without the baked bedside lamp, which changed `docs/room-blender.png`. On the new render the sideways camera position comes out at 1.28 m, 3 cm outside the ±0.30 m target; everything else still passes. Worth a look when tuning wall detection; not a regression in the code. The overlay, depth map and full report of the "camera height fixed" run are in [`results/`](results/).
 
 **Takeaways:**
-- The geometry (floor, walls, ceiling, angles) is solid. **Scale is the weak point**: the metric model is ~15 % too large here even after the lens correction. Use `--camera-height` whenever the photographer can say roughly how high they held the camera.
+- The geometry (floor, walls, ceiling, angles) is solid. **Scale is the weak point**: the depth model alone is 13–21 % off on this render (too large before the lens-correction fix, a bit too small after it). Use `--camera-height` whenever the photographer can say roughly how high they held the camera.
 - The right wall is seen only as a thin strip at the image edge, in line with the desk front, so its position is pulled ~30 cm inward. That is why, for a known room, the origin comes from the best-seen side wall plus the known width.
 - Not tested yet: anything after step 3.
 
@@ -280,7 +280,7 @@ With `--answers`, the run uses the room's reference camera (lens and height) fro
 | Image | Found | False detections | Notes |
 |---|---|---|---|
 | Sofa room render | ✅ **3/3** (mug 0.70, book 0.55, lamp 0.57) | **0** | floor lamp rejected by size (1.57 m); plant pot rejected by CLIP |
-| TV room render | **2/3** (book, mug) | **0** | the lamp is really hidden behind the armchair (only the top of its shade shows); candle and shelf vase rejected |
+| TV room render | ✅ **3/3** (book, mug, lamp) | **0** | the lamp used to hide behind the armchair; moved to the left end of the TV cabinet it is found (0.61). Candle and shelf vase rejected |
 | Room 1 render | ✅ **2/2** (mug, lamp) | **0** | the book is out of frame; the baked coffee-table book and closed notebook reported as decor |
 | Real TV photo | ✅ the book on the coffee table | 1 (ambiguous) | wall sconce rejected (base 1.65 m); a small amber glass on the side table kept as a mug |
 | Real sofa photo | nothing (correct: none of our objects) | **0** | its floor lamp rejected by CLIP |
@@ -305,7 +305,7 @@ Graded against the answer keys (success = position within 15 cm, table height wi
 | Render | Right | Position error | Scale |
 |---|---|---|---|
 | Sofa room | ✅ **3/3** (mug, book, lamp) | 3–5 cm | 1.03–1.07 |
-| TV room | **2/3** (book, mug; the lamp is hidden, step 4 can't see it) | 1–5 cm | 0.87–1.02 |
+| TV room | ✅ **3/3** (book, mug, lamp) | 1–5 cm | 0.87–1.03 |
 | Room 1 | ✅ **2/2** (mug, lamp; the book is out of frame) | 3–6 cm | 0.98–0.99 |
 
 Every object is placed at its table's exact height and passes `validate_scene.py --strict`. Room 1's two baked books are also placed and reported as decor (in a real photo they'd be correct). Before the viewing-angle correction, scales were 1.1–1.25.
@@ -338,7 +338,7 @@ Checked by rendering the TV room in Unity from the solved camera (`PipelineScene
 
 **What it found: the model furniture is off, not just the camera.** In the sofa room no single camera fits both the posters and the furniture (with the furniture included the "best" camera was 2.4 m high). The model's tables sit ~0.5 m off relative to the walls, because they were placed by eye. Both solved cameras also sit at the edge of the modelled room, so the real rooms are probably a bit wider.
 
-**So real photos are placed relative to their table.** Each landmarks file also marks the centre pixel of each table top (`surface_pixels`). Step 5 (real photo, `--room` without `--answers`) uses the photo camera to find where the table and the object are in the photo's geometry, and applies the object's offset from its table to the model's table. The object lands on the right table at the right spot on it, whatever the model's table placement. Renders with `--answers` keep using the reference camera (unchanged: 3/3, 2/3, 2/2).
+**So real photos are placed relative to their table.** Each landmarks file also marks the centre pixel of each table top (`surface_pixels`). Step 5 (real photo, `--room` without `--answers`) uses the photo camera to find where the table and the object are in the photo's geometry, and applies the object's offset from its table to the model's table. The object lands on the right table at the right spot on it, whatever the model's table placement. Renders with `--answers` keep using the reference camera (3/3, 3/3, 2/2).
 
 **Results on the real photos:** TV photo → the book on the coffee table and the amber glass on the side table (as a mug, the borderline step 4 detection; its measured size is out of range, so scale 1.0 with a warning). Sofa photo → empty scene (none of our objects in it). There is no answer key for real photos, so exact accuracy isn't measured; Unity preview: `results/preview_tv_photo_aligned.png`.
 

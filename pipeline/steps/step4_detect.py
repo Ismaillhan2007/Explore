@@ -192,7 +192,8 @@ def measure(det: Detection, points: Any, room: Any, cam: Any) -> dict | None:
     bottom_cam = np.array([(u - cam.cx) / cam.fx * z, (v - cam.cy) / cam.fy * z, z])
     bottom = M[:3, :3] @ bottom_cam + M[:3, 3]
     centre = np.median(p @ M[:3, :3].T + M[:3, 3], axis=0)
-    return {"height_m": (y1 - y0) * z / cam.fy * s, "width_m": (x1 - x0) * z / cam.fx * s,
+    height_m, width_m = (y1 - y0) * z / cam.fy * s, (x1 - x0) * z / cam.fx * s
+    return {"height_m": height_m, "width_m": width_m, "aspect": height_m / max(width_m, 1e-6),
             "base_m": float(bottom[1]), "center": [float(c) for c in centre]}
 
 
@@ -224,7 +225,11 @@ LOOKALIKES = {
     # Not "a tray", "a tablet" or "a laptop": CLIP confuses dark closed books with all three, and missing a
     # real book is worse for us than calling a laptop a book (the size check still applies).
     "book": ["a cardboard box", "a cushion", "a picture frame"],
-    "lamp": ["a floor lamp", "a potted plant", "a vase", "a wall light", "a chair"],
+    # Not "a floor lamp" or "a chair": CLIP judges the padded crop, and next to a TV or a chair it
+    # called our table lamp a floor lamp (0.32 vs 0.16) and then a chair (0.37 vs 0.24). Geometry
+    # rejects both instead: floor lamps are too tall or a tall thin box (aspect), chairs stand on
+    # the floor (a table lamp's base is >= 0.25 m up).
+    "lamp": ["a potted plant", "a vase", "a wall light"],
 }
 PHRASES = {"mug": ["a coffee mug", "a cup"], "book": ["a book", "a closed book lying flat", "a stack of books"],
            "lamp": ["a table lamp with a lampshade"]}
