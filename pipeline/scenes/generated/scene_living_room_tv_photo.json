@@ -4,15 +4,26 @@
   "wallColor": "#ffffff",
   "objects": [
     {
+      "label": "mug",
+      "model": "mug",
+      "position": [
+        0.13,
+        0.55,
+        1.47
+      ],
+      "rotationY": 150,
+      "scale": 1.0
+    },
+    {
       "label": "book",
       "model": "book",
       "position": [
         -0.28,
         0.42,
-        -0.22
+        -0.15
       ],
-      "rotationY": 151,
-      "scale": 1.0
+      "rotationY": 128,
+      "scale": 1.23
     }
   ]
 }

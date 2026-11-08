@@ -180,6 +180,43 @@
           "small potted plant",
           "tray"
         ]
+      },
+      "photo": {
+        "_comment": "Camera the real photo was taken from, solved by steps/align_camera.py from landmarks/LivingRoomSofa.json. Used by step 5 for real photos (not for the Unity renders, which use 'camera').",
+        "image": "pipeline/photos/living_room_sofa.jpg",
+        "image_size": [
+          987,
+          1481
+        ],
+        "camera": {
+          "position": [
+            1.903,
+            1.238,
+            -2.2
+          ],
+          "look_at": [
+            1.492,
+            1.117,
+            -1.296
+          ],
+          "vfov_deg": 50.03
+        },
+        "rms_px": 16.24,
+        "max_error_px": 27.5,
+        "surface_pixels": {
+          "coffee_table": [
+            395,
+            1000
+          ],
+          "side_table": [
+            160,
+            925
+          ],
+          "pouf": [
+            780,
+            1110
+          ]
+        }
       }
     },
     "LivingRoomTV": {
@@ -288,6 +325,43 @@
           "vase with branches",
           "small side-table decor"
         ]
+      },
+      "photo": {
+        "_comment": "Camera the real photo was taken from, solved by steps/align_camera.py from landmarks/LivingRoomTV.json. Used by step 5 for real photos (not for the Unity renders, which use 'camera').",
+        "image": "pipeline/photos/living_room_tv.jpg",
+        "image_size": [
+          505,
+          607
+        ],
+        "camera": {
+          "position": [
+            2.102,
+            0.96,
+            -2.012
+          ],
+          "look_at": [
+            1.612,
+            0.929,
+            -1.141
+          ],
+          "vfov_deg": 66.38
+        },
+        "rms_px": 11.22,
+        "max_error_px": 21.1,
+        "surface_pixels": {
+          "coffee_table": [
+            170,
+            422
+          ],
+          "side_table": [
+            240,
+            359
+          ],
+          "tv_cabinet": [
+            330,
+            333
+          ]
+        }
       }
     }
   },
