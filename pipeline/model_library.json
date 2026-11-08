@@ -408,6 +408,10 @@
         "base_m": [
           0.25,
           1.4
+        ],
+        "aspect": [
+          0.5,
+          3.0
         ]
       },
       "footprint_m": [
@@ -454,6 +458,6 @@
       "scale_from": "height"
     }
   },
-  "_comment_plausible": "plausible: ranges a detection's measured size must fall in (step 4 size check, using depth and the floor from steps 2-3). height = vertical extent, width = largest horizontal extent, base = height of its bottom above the floor. A table lamp sits on furniture (base >= 0.25 m), so floor lamps are rejected.",
+  "_comment_plausible": "plausible: ranges a detection's measured size must fall in (step 4 size check, using depth and the floor from steps 2-3). height = vertical extent, width = largest horizontal extent, base = height of its bottom above the floor. A table lamp sits on furniture (base >= 0.25 m), so floor lamps are rejected. aspect = height / width of the box in metres: a table lamp is about 1.5, the visible top of a floor lamp (shade + pole) about 5.",
   "_comment_footprint": "footprint_m: real [longest, shortest] horizontal size, used by step 5 to keep a pickable on its table and by step 6 when scale_from is 'width' (a book lying flat shows its top, not its height)."
 }

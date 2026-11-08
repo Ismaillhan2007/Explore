@@ -17,17 +17,21 @@ def _device() -> str:
     return "cuda" if torch.cuda.is_available() else "cpu"
 
 
-# The metric indoor model is trained on Hypersim (hfov 60 deg). It reads "how big things look"
-# as distance, so a wider lens makes everything look farther. Correct by the ratio of
-# normalised focal lengths (fx / image width).
+# The metric indoor model is trained on Hypersim: 1024 x 768 landscape images, hfov 60 deg. It reads
+# "how big things look" as distance, so a wider lens makes everything look farther. Correct by the
+# ratio of normalised focal lengths. Normalise by the SHORT side: the model's processor resizes every
+# image so its short side is 518 px, whatever the orientation (checked: 683x1024 -> 518x770). Using
+# the width instead made portrait photos 4/3 too deep (the width is the short side of a portrait).
 TRAIN_HFOV_DEG = 60.0
+TRAIN_SIZE = (1024, 768)
 
 
 def focal_correction(cam: Camera) -> float:
     """Multiply the model's depth by this to account for a lens wider/narrower than training."""
     import math
-    train = 0.5 / math.tan(math.radians(TRAIN_HFOV_DEG) / 2)   # fx / width at 60 deg
-    return (cam.fx / cam.width) / train
+    train_fx = (TRAIN_SIZE[0] / 2) / math.tan(math.radians(TRAIN_HFOV_DEG) / 2)
+    train = train_fx / min(TRAIN_SIZE)                          # fx / short side at training: 1.155
+    return (cam.fx / min(cam.width, cam.height)) / train
 
 
 def estimate_depth(rgb: Any, cam: Camera | None = None, model_id: str = DEPTH_MODEL) -> Any:

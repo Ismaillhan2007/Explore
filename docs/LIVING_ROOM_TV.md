@@ -16,7 +16,7 @@ Reference: `pipeline/photos/living_room_tv.jpg` (kept local, not in the repo). S
 |---|---|---|
 | Book | `book.prefab` | tiered coffee table, top 0.42 m |
 | Mug | `mug.prefab` (fitted to 10 cm) | brass side table, top 0.55 m |
-| Table lamp | `lamp.prefab` (0.57 m) | right end of the TV cabinet, top 0.55 m |
+| Table lamp | `lamp.prefab` (0.57 m) | left end of the TV cabinet, top 0.55 m (visible from the start view) |
 
 Everything else is static, with box/cylinder colliders. The player starts at the front of the room facing the TV wall.
 

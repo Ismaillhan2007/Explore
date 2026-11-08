@@ -92,6 +92,15 @@ class SizeCheck(unittest.TestCase):
         self.assertAlmostEqual(s["width_m"], 0.4)
         self.assertAlmostEqual(s["base_m"], 1.5 - 0.6)    # bottom pixel 30 px below centre -> 0.6 m below camera
 
+    def test_tall_thin_box_is_not_a_table_lamp(self):
+        # The visible top of a floor lamp (shade + pole): 0.8 m tall, 0.16 m wide, base on furniture height.
+        lib = {"models": {"m": {"label": "lamp", "plausible": {"height_m": [0.3, 1.0], "aspect": [0.5, 3.0]}}}}
+        thin = det("lamp", .9, (45, 40, 53, 80))            # 8 x 40 px -> 0.16 x 0.8 m, aspect 5
+        kept, rejected = size_check([thin], self.points, self.room, lib, self.cam)
+        self.assertEqual(kept, [])
+        self.assertIn("aspect", rejected[0]["why"])
+        self.assertAlmostEqual(measure(thin, self.points, self.room, self.cam)["aspect"], 5.0)
+
     def test_floor_lamp_rejected_table_lamp_kept(self):
         table = det("lamp", .9, (40, 50, 60, 80))         # 0.6 m tall, base 0.9 m
         floor = det("lamp", .8, (40, 20, 60, 125 - 26))   # tall and reaching low

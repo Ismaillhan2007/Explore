@@ -53,6 +53,12 @@ class Intrinsics(unittest.TestCase):
         self.assertAlmostEqual(focal_correction(intrinsics_from_fov(800, 600, 60)), 1.0, places=6)
         self.assertLess(focal_correction(intrinsics_from_fov(800, 600, 80)), 1.0)   # wide lens -> closer
 
+    def test_focal_correction_does_not_depend_on_orientation(self):
+        # The same camera held upright: same focal length in pixels, width and height swapped.
+        land = intrinsics_from_fov(800, 600, 60)
+        port = Camera(fx=land.fx, fy=land.fy, cx=300, cy=400, width=600, height=800)
+        self.assertAlmostEqual(focal_correction(port), focal_correction(land), places=6)
+
 
 class Geometry(unittest.TestCase):
     def setUp(self):
