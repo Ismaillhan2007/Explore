@@ -16,7 +16,7 @@ photo.jpg ──► [1 camera] ──► [2 depth] ──► [3 room] ──► 
                                               └── floor plane, walls, scale, wall tint ──────────────────────────┘
 ```
 
-Status: **steps 1–4 work** (camera, depth, floor/walls/scale, finding the pickables; see "Results so far" and "Step 4 results" below). **Steps 5–6 are not started**; their objectives and success criteria are written in section 2. `validate_scene.py` works. The answer keys in [`scenes/`](scenes/) list where every pickable really is in each of the three built rooms, so Role A can build the scene loader now, without waiting for the algorithm.
+Status: **all steps work end to end**: photo → camera, depth, room, pickables found, placed on their tables, matched to prefabs → scene JSON (see "Results so far", "Step 4 results" and "Steps 5–6 results" below). `validate_scene.py` works. The answer keys in [`scenes/`](scenes/) list where every pickable really is in each of the three built rooms. What's missing is the Unity loader that reads a scene JSON at runtime (Role A); `PipelineScenePreview.cs` shows the result in Unity for checking.
 
 ---
 
@@ -76,35 +76,20 @@ Three stages, each removing a different kind of mistake. All models are open wei
 
 Output: `debug/<name>/detections.png` (masks, boxes, labels, answer-key crosses) and `detect_report.json` (kept with sizes, rejected with reasons, grade).
 
-### Step 5 — Place each object in 3D (`steps/step5_place.py`) — objective, not started
-**In:** step 4's detections (each already has `size`: centre, height, width, base height, in world metres), the room from step 3, the room's `surfaces` from `model_library.json`. **Out:** one `Placement(label, position, rotation_y, size)` per detection, in the scene-JSON convention (`x, z` = footprint centre, `y` = top of the surface it rests on).
+### Step 5 — Place each object in 3D (`steps/step5_place.py`)
+**In:** step 4's detections, the room from step 3, the room's entry in `model_library.json`. **Out:** one `Placement(label, position, rotation_y, size, surface)` per detection, in the scene-JSON convention (`x, z` = footprint centre, `y` = top of the surface it rests on).
 
-**Objectives:**
-1. **Position (`x, z`):** start from step 4's measured centre. Do not take the median of the mask's 3D points directly: step 4 showed that single-photo depth blurs at small objects' edges (a 10 cm mug measured 28 cm wide that way), so reuse step 4's one-depth-per-object measurement.
-2. **Resting surface (`y`):** for a built room, snap to the highest known surface under `x, z` with `resting_surface()` (already written and tested). If `x, z` lands just off a table (within ~10 cm of its edge), nudge it onto the table instead of dropping the object to the floor. Use step 4's measured base height to choose between two surfaces when both are plausible (e.g. side table vs floor). For a room without known surfaces, use the measured base height directly.
-3. **Keep it on the table:** clamp `x, z` so the object's footprint (from the model's real size) does not overhang the surface it rests on.
-4. **Rotation (`rotationY`), first version:** face the camera. Better version only if time allows: compare the crop with renders of the prefab at 12 yaw angles (30° steps) using CLIP and keep the best.
-5. **One object per detection;** if two detections of the same label end up within ~10 cm, keep the higher-scoring one.
+Two modes:
+- **Built room (`--room <name>`, the room has a reference camera with `look_at`).** Each built room was modelled from its photo, so its reference camera is where the photo was taken. The position then comes from geometry alone, with no depth: follow the ray through the centre of the object's box until it reaches the height of a surface top plus half the object's height, and keep it if it lands on that surface. Of the surfaces it can land on, prefer the one whose top matches step 4's measured base height (±20 cm), then the nearest. Clamp so the footprint (`footprint_m` in the library) stays on the surface. Facing: toward the camera. Same-label placements closer than 10 cm are merged.
+- **Unknown room (no `--room`).** Step 4's depth-based centre and base height in step 3's room frame.
 
-**Success criteria (graded against the answer keys in `scenes/`, on the three room renders):**
-- Every pickable step 4 found is placed within **15 cm** (x, z) of its answer-key position.
-- `y` equals the right surface height (within 1 cm) for every found pickable: the mug on the coffee table at 0.42 m, the lamp on the side table at 0.53 m, and so on.
-- No pickable overhangs its table (the same check as the Unity EditMode tests).
+**Why geometry, not depth.** Measured before building this: step 4's depth-based centres were off by 17–19 cm in room 1 but **34–108 cm** in the living rooms. The rotation of the room was right (within 3°); the depth itself stretched distances by 13–21 %, even with the true camera height. Correcting depth with an offset didn't help (the floor stayed flat whatever the offset, so there was nothing to fit). Ray geometry needs no depth at all.
 
-### Step 6 — Match each object to a prefab (`steps/step6_match.py`) — objective, not started
-**In:** step 5's placements, `model_library.json`. **Out:** one `SceneObject(label, model, position, rotation_y, scale)` per placement.
-
-**Objectives:**
-1. **Model choice:** candidates = library models with the same `label`, `kind: "pickable"`, `status: "available"`. Today there is exactly one per label (mug, book, lamp), so this is a lookup. When there are several (e.g. two mugs), pick the one whose thumbnail CLIP (already loaded for step 4, via `transformers`) rates closest to the crop.
-2. **Scale:** measured height ÷ the model's real `height_m` (books: measured width ÷ the book's real width, since a lying book's height is mostly perspective). **Clamp to 0.7–1.4** with `clamp_scale()` (already written); outside that range log a warning and use 1.0. The Unity loader fits each instance to `height_m × scale`.
-3. **Write the scene JSON** with step 7 (`write_scene()` already works), then run `validate_scene.py`.
-4. **Grade the whole pipeline end to end:** `run_pipeline.py <render> --answers scenes/<room>.json` should report, per object, found / position error / height error / scale, and the written scene JSON should pass `validate_scene.py --strict`.
-
-**Success criteria:**
-- On the sofa and room 1 renders, the automatic scene JSON contains the same pickables as the answer key (the TV room may miss the hidden lamp), each with the right `model`, positions within 15 cm, and `scale` between 0.8 and 1.25.
-- The automatic JSON passes `validate_scene.py --strict` without hand edits.
-- On the real TV photo, the book is written into the scene JSON on the coffee table.
-- Out of scope for steps 5–6: the Unity loader that reads the JSON (Role A), new pickable types, image-to-3D models.
+### Step 6 — Match each object to a prefab (`steps/step6_match.py`)
+**In:** step 5's placements, `model_library.json`. **Out:** `SceneObject(label, model, position, rotation_y, scale)` plus warnings.
+- **Model:** a lookup (one available pickable model per label today). With several, it takes the first and warns; choosing by thumbnail similarity is future work.
+- **Scale:** measured box size (pixels × exact distance from step 5 ÷ focal length) ÷ what the real model's box would measure from that viewpoint. Seen from above, a box also contains the object's top, so the expected height is `height × cos(a) + depth × sin(a)` for a view `a` degrees down. Books lying flat use width instead, compared with the average of their long side and diagonal. Clamped to 0.7–1.4; outside that, scale 1.0 with a warning.
+- Then step 7 writes the scene JSON and `validate_scene.py --strict` checks it. With `--answers` it goes to `debug/<name>/` and is graded; without, to `scenes/generated/scene_<name>.json`.
 
 ### Step 7 — Export the scene JSON (`steps/step7_export.py`)
 **In:** room, matched placements. **Out:** `scenes/scene_<name>.json`.
@@ -201,7 +186,8 @@ Each run prints PASS/FAIL per check and writes `debug/<name>/depth.png`, `room_o
 3b. ✅ Step 3 on the two living-room photos (see results). Both are now built rooms (`LivingRoomSofa`, PR #9; `LivingRoomTV`, PR #11) with their real `size_m`, `camera`, `spawn` and `surfaces` in `model_library.json`.
 3c. ✅ Answer keys: `scenes/scene_room_a.json`, `scene_living_room_sofa.json`, `scene_living_room_tv.json` list where every pickable really is in each built room.
 4. ✅ Step 4, find the pickables (see "Step 4 results" below).
-5. **Next: steps 5 + 6** (objectives and success criteria in section 2, "Step 5" and "Step 6"). Not started. Step 4 already measures each pickable's centre, size and height above the floor, so step 5 is mostly snapping that to the known surfaces; step 6 is a lookup plus scale, then the first automatic scene JSON, graded against the answer keys.
+5. ✅ Steps 5 + 6: placed on surfaces by ray geometry, matched, scaled, scene JSON written and graded (see "Steps 5–6 results").
+5b. **Next:** line each built room's reference camera up with its photo (see "Steps 5–6 results"), so real-photo placements are exact, not just on the right table.
 6. Unity loader (Role A): read a scene JSON and place the pickables, instead of positions hardcoded in each room's builder.
 7. Only then: more pickable types, better rotation, hero object via image-to-3D, live photo demo.
 
@@ -303,6 +289,36 @@ Measured sizes on the renders: mugs 10–12 cm (true 10), lamps 0.53–0.54 m (t
 What it took to get here, in order: (1) detector alone found 7/8 but with 3–4 false detections per image; (2) per-point size check rejected real mugs (depth blur); (3) box-based size check fixed that and removed floor lamp/sconce/shelf vase; (4) CLIP removed same-size look-alikes (plant pots, candle); (5) look-alike lists tuned on the real TV photo, whose dark books CLIP took for a tablet/laptop.
 
 **Known limits:** occluded objects are missed; same-size, same-shape things can still pass (a glass as a mug, a laptop as a book); tested on 3 renders and 2 photos only, so the thresholds may need re-tuning on new photos. Render overlays are in `results/` (`*_detections.png`).
+
+### Steps 5–6 results
+
+```bash
+python run_pipeline.py ../docs/living-room-sofa-unity.png --name full_sofa  --answers scenes/scene_living_room_sofa.json
+python run_pipeline.py ../docs/living-room-tv-unity.png  --name full_tv    --answers scenes/scene_living_room_tv.json
+python run_pipeline.py ../docs/room-unity.png            --name full_room1 --answers scenes/scene_room_a.json
+python run_pipeline.py photos/living_room_tv.jpg --name living_room_tv_photo --room LivingRoomTV   # -> scenes/generated/
+```
+
+Graded against the answer keys (success = position within 15 cm, table height within 1 cm, scale 0.8–1.25, right model):
+
+| Render | Right | Position error | Scale |
+|---|---|---|---|
+| Sofa room | ✅ **3/3** (mug, book, lamp) | 3–5 cm | 1.03–1.07 |
+| TV room | **2/3** (book, mug; the lamp is hidden, step 4 can't see it) | 1–5 cm | 0.87–1.02 |
+| Room 1 | ✅ **2/2** (mug, lamp; the book is out of frame) | 3–6 cm | 0.98–0.99 |
+
+Every object is placed at its table's exact height and passes `validate_scene.py --strict`. Room 1's two baked books are also placed and reported as decor (in a real photo they'd be correct). Before the viewing-angle correction, scales were 1.1–1.25.
+
+**Real TV photo:** the book is placed on the modelled coffee table and written to `scenes/generated/scene_living_room_tv_photo.json`. Its scale is 1.0 with a warning: the photo shows a stack of two large books (0.43 m), outside the scale range. The amber glass from step 4 lands on no modelled surface and is dropped (correctly: it isn't a mug).
+
+**Checked in Unity** with `Assets/_Project/Editor/PipelineScenePreview.cs` (opens the room, replaces its pickables with the scene JSON's, renders the reference camera, saves nothing):
+```bash
+Unity -batchmode -quit -projectPath .. -executeMethod RoomVR.EditorTools.PipelineScenePreview.Run \
+  -sceneJson pipeline/debug/full_sofa/scene_full_sofa.json -out pipeline/debug/preview_full_sofa.png
+```
+In the sofa and TV renders the generated objects sit where the hand-placed ones do (`results/preview_*.png`). Differences: rotation (facing the camera instead of the hand-picked angle) and the mug's material (the room builders give it a ceramic look, the preview uses the prefab's default).
+
+**Limit found:** the built TV room's reference camera doesn't line up exactly with the photo (it sits farther back with a wider view), so a real-photo object lands on the right table, not exactly on its spot. Lining each reference camera up with its photo (same field of view and position, checked by overlaying the photo on the render) is the next improvement.
 
 ## 8. Known risks
 
