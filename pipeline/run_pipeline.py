@@ -5,7 +5,7 @@
     python run_pipeline.py ../docs/room-blender.png --name render_check --room RenderedRoom --hfov 73.3 --stop-after room
     python run_pipeline.py ../docs/living-room-sofa-unity.png --name sofa_detect --answers scenes/scene_living_room_sofa.json --stop-after detect
 
-Steps 1-4 work. Steps 5-6 are still stubs, so use --stop-after room or --stop-after detect for now.
+All steps work. Without --answers, the scene JSON is written to scenes/generated/scene_<name>.json.
 Debug images and a JSON report go to pipeline/debug/<name>/ (not committed).
 """
 from __future__ import annotations
@@ -171,16 +171,45 @@ def run(photo: Path, name: str, room_name: str | None, hfov: float | None,
 
     from steps.step5_place import place_objects
     from steps.step6_match import match_models
-    from steps.step7_export import write_scene
-    surfaces = known.get("surfaces", {})
-    placements = place_objects(detections, points, room, surfaces)           # 5
-    objects = match_models(placements, rgb, library)                         # 6
-    scene = Scene(room=room.name, wall_color=room.wall_color, objects=objects)
-    out = write_scene(scene, HERE / "scenes" / f"scene_{name}.json")         # 7
-    result = subprocess.run([sys.executable, str(HERE / "validate_scene.py"), str(out)])
-    if result.returncode != 0:
-        raise SystemExit(f"validation failed for {out}; fix the step or the JSON by hand")
-    print(f"wrote {out}")
+    from steps.step7_export import scene_to_dict, write_scene
+    mode = "reference camera" if "look_at" in known.get("camera", {}) else "depth (unknown room)"
+    placements = place_objects(detections, room, known, library, (cam.width, cam.height))       # 5
+    print(f"\n[5 place ] {len(placements)} placed, mode: {mode}")
+    for pl in placements:
+        print(f"           {pl.label:<5} on {pl.surface:<13} at ({pl.position[0]:.2f}, {pl.position[1]:.2f}, {pl.position[2]:.2f}), "
+              f"facing {pl.rotation_y:.0f} deg, measured {pl.size[0]:.2f} x {pl.size[1]:.2f} m")
+    objects, warnings = match_models(placements, library)                                       # 6
+    print(f"[6 match ] {', '.join(f'{o.label}->{o.model} x{o.scale}' for o in objects) or 'nothing'}")
+    for w in warnings:
+        print(f"           warning: {w}")
+    scene = Scene(room=room.name if known else "unknown", wall_color=room.wall_color, objects=objects)
+    out = write_scene(scene, (debug if answers else HERE / "scenes" / "generated") / f"scene_{name}.json")  # 7
+    print(f"[7 export] {out}")
+    if known:
+        result = subprocess.run([sys.executable, str(HERE / "validate_scene.py"), "--strict", str(out)])
+        if result.returncode != 0:
+            print("validation failed: fix the step or the JSON by hand")
+            return 1
+    if answers:
+        from steps.evaluate import grade_scene, truth_in_image
+        answer = json.loads(Path(answers).read_text(encoding="utf-8"))
+        visible = {t["model"] + str(t["position"]): t["in_frame"] for t in truth_in_image(answer, library, cam.width, cam.height)}
+        g = grade_scene(scene_to_dict(scene), answer, visible)
+        print(f"\nScene checks against the answer key (position within 15 cm, height within 1 cm, scale 0.8-1.25):")
+        for r in g["objects"]:
+            if r["result"] == "missing":
+                print(f"  FAIL  {r['label']:<5} not in the scene"); continue
+            if r["result"] == "out of frame":
+                print(f"  ----  {r['label']:<5} out of frame (not graded)"); continue
+            print(f"  {'PASS' if r['result'] == 'pass' else 'FAIL'}  {r['label']:<5} position error {r['xz_error_m'] * 100:.0f} cm, "
+                  f"height error {r['y_error_m'] * 100:.1f} cm, scale {r['scale']}")
+        for e in g["extra"]:
+            print(f"  FAIL  extra object {e['label']} at {e['position']}")
+        for e in g["decor"]:
+            print(f"  ----  {e['label']} placed on {e['decor']} (looks exactly like ours; not counted)")
+        print(f"  => {g['passed']}/{g['total']} objects right, {len(g['extra'])} extra")
+        (debug / "scene_report.json").write_text(json.dumps(g, indent=2) + "\n", encoding="utf-8")
+        return 0 if g["passed"] == g["total"] and not g["extra"] else 1
     return 0
 
 

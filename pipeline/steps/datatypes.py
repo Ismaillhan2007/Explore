@@ -57,6 +57,8 @@ class Placement:
     rotation_y: float       # degrees
     size: Vec3              # measured width, height, depth in metres
     detection: Detection | None = None
+    surface: str = ""                # which surface it rests on (step 5)
+    view_down_deg: float = 0.0       # how far below horizontal the camera sees it (step 6 uses it for scale)
 
 
 @dataclass

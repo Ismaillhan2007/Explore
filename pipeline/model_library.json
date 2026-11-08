@@ -310,7 +310,12 @@
           0.0,
           1.4
         ]
-      }
+      },
+      "footprint_m": [
+        0.12,
+        0.09
+      ],
+      "scale_from": "height"
     },
     "lamp": {
       "label": "lamp",
@@ -330,7 +335,12 @@
           0.25,
           1.4
         ]
-      }
+      },
+      "footprint_m": [
+        0.4,
+        0.4
+      ],
+      "scale_from": "height"
     },
     "book": {
       "label": "book",
@@ -350,15 +360,26 @@
           0.0,
           1.4
         ]
-      }
+      },
+      "footprint_m": [
+        0.22,
+        0.15
+      ],
+      "scale_from": "width"
     },
     "PickableCube": {
       "label": "box",
       "kind": "pickable",
       "height_m": 0.2,
       "status": "available",
-      "detect": false
+      "detect": false,
+      "footprint_m": [
+        0.2,
+        0.2
+      ],
+      "scale_from": "height"
     }
   },
-  "_comment_plausible": "plausible: ranges a detection's measured size must fall in (step 4 size check, using depth and the floor from steps 2-3). height = vertical extent, width = largest horizontal extent, base = height of its bottom above the floor. A table lamp sits on furniture (base >= 0.25 m), so floor lamps are rejected."
+  "_comment_plausible": "plausible: ranges a detection's measured size must fall in (step 4 size check, using depth and the floor from steps 2-3). height = vertical extent, width = largest horizontal extent, base = height of its bottom above the floor. A table lamp sits on furniture (base >= 0.25 m), so floor lamps are rejected.",
+  "_comment_footprint": "footprint_m: real [longest, shortest] horizontal size, used by step 5 to keep a pickable on its table and by step 6 when scale_from is 'width' (a book lying flat shows its top, not its height)."
 }

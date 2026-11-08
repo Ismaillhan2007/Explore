@@ -5,6 +5,7 @@ answer-key object can be projected into the image and compared with what step 4 
 """
 from __future__ import annotations
 
+
 import math
 
 
@@ -86,3 +87,43 @@ def grade_detections(detections, truth: list[dict], margin_px: int = 6, decor: l
     return {"objects": rows, "extra_detections": extra, "decor_detections": on_decor,
             "found": sum(r["result"] == "found" for r in in_frame), "in_frame": len(in_frame),
             "false_detections": len(extra)}
+
+
+POSITION_TOL_M = 0.15
+HEIGHT_TOL_M = 0.01
+SCALE_RANGE = (0.8, 1.25)
+
+
+def grade_scene(scene: dict, answer: dict, visible: dict | None = None) -> dict:
+    """Compare a generated scene JSON with an answer key: per answer object, the nearest generated
+    object with the same label; position error in the floor plan, height error, scale."""
+    import math
+    generated = list(scene["objects"]); used = set(); rows = []
+    for t in answer["objects"]:
+        if visible is not None and not visible.get(t["model"] + str(t["position"]), True):
+            rows.append({"label": t["label"], "result": "out of frame"}); continue
+        best = None
+        for i, o in enumerate(generated):
+            if i in used or o["label"] != t["label"]:
+                continue
+            err = math.hypot(o["position"][0] - t["position"][0], o["position"][2] - t["position"][2])
+            if best is None or err < best[1]:
+                best = (i, err)
+        if best is None:
+            rows.append({"label": t["label"], "result": "missing"}); continue
+        used.add(best[0]); o = generated[best[0]]
+        dy = abs(o["position"][1] - t["position"][1])
+        ok = best[1] <= POSITION_TOL_M and dy <= HEIGHT_TOL_M and SCALE_RANGE[0] <= o["scale"] <= SCALE_RANGE[1] and o["model"] == t["model"]
+        rows.append({"label": t["label"], "result": "pass" if ok else "fail", "model": o["model"],
+                     "position": o["position"], "truth": t["position"], "xz_error_m": round(best[1], 3),
+                     "y_error_m": round(dy, 3), "scale": o["scale"]})
+    extra, on_decor = [], []
+    for i, o in enumerate(generated):
+        if i in used:
+            continue
+        near = next((dd for dd in answer.get("decor", []) if dd["label"] == o["label"]
+                     and math.hypot(o["position"][0] - dd["center"][0], o["position"][2] - dd["center"][2]) <= 0.25), None)
+        (on_decor.append(dict(o, decor=near["name"])) if near else extra.append(o))
+    graded = [r for r in rows if r["result"] != "out of frame"]
+    return {"objects": rows, "extra": extra, "decor": on_decor,
+            "passed": sum(r["result"] == "pass" for r in graded), "total": len(graded)}

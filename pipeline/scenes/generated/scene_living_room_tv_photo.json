@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "room": "LivingRoomTV",
+  "wallColor": "#ffffff",
+  "objects": [
+    {
+      "label": "book",
+      "model": "book",
+      "position": [
+        -0.28,
+        0.42,
+        -0.22
+      ],
+      "rotationY": 151,
+      "scale": 1.0
+    }
+  ]
+}
