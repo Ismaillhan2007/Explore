@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "source": "answer key: pickables as placed by BuildLivingRoomTV.cs",
+  "room": "LivingRoomTV",
+  "wallColor": "#ffffff",
+  "objects": [
+    {
+      "label": "book",
+      "model": "book",
+      "position": [
+        -0.05,
+        0.42,
+        -0.12
+      ],
+      "rotationY": -15,
+      "scale": 1.0
+    },
+    {
+      "label": "mug",
+      "model": "mug",
+      "position": [
+        0.15,
+        0.55,
+        1.55
+      ],
+      "rotationY": 0,
+      "scale": 1.0
+    },
+    {
+      "label": "lamp",
+      "model": "lamp",
+      "position": [
+        1.52,
+        0.55,
+        2.24
+      ],
+      "rotationY": 0,
+      "scale": 1.0
+    }
+  ],
+  "decor": [
+    {
+      "label": "book",
+      "name": "baked pair of books on the coffee table",
+      "center": [
+        -0.55,
+        0.45,
+        0.3
+      ]
+    }
+  ],
+  "_comment_decor": "Baked (not pickable) objects that look exactly like a pickable. Grading reports a detection on one of these as 'decor', not as a false detection; the loader ignores this field."
+}

@@ -3,8 +3,9 @@
 
     python run_pipeline.py photos/room_1.jpg --name room_1 --room RenderedRoom --stop-after room
     python run_pipeline.py ../docs/room-blender.png --name render_check --room RenderedRoom --hfov 73.3 --stop-after room
+    python run_pipeline.py ../docs/living-room-sofa-unity.png --name sofa_detect --answers scenes/scene_living_room_sofa.json --stop-after detect
 
-Steps 1-3 work. Steps 4-6 are still stubs, so use --stop-after room for now.
+Steps 1-4 work. Steps 5-6 are still stubs, so use --stop-after room or --stop-after detect for now.
 Debug images and a JSON report go to pipeline/debug/<name>/ (not committed).
 """
 from __future__ import annotations
@@ -57,15 +58,73 @@ def grade_room(report: dict, known: dict) -> list[tuple[str, str, bool]]:
     return rows
 
 
+def pickable_labels(library: dict) -> list[str]:
+    return sorted({m["label"] for m in library["models"].values()
+                   if m.get("status") == "available" and m.get("kind") == "pickable" and m.get("detect", True)})
+
+
+def report_detect(detections, rejected, rgb, cam, library, debug: Path, answers: Path | None, seconds: float) -> dict | None:
+    """Print and save step 4's result; grade it against an answer key when one is given."""
+    from steps.evaluate import decor_in_image, grade_detections, truth_in_image
+    from steps.step4_detect import save_detections
+    truth, grade = None, None
+    if answers:
+        answer = json.loads(Path(answers).read_text(encoding="utf-8"))
+        truth = truth_in_image(answer, library, cam.width, cam.height)
+        grade = grade_detections(detections, truth, decor=decor_in_image(answer, library, cam.width, cam.height))
+    save_detections(rgb, detections, str(debug / "detections.png"), [t for t in (truth or []) if t["in_frame"]])
+    print(f"[4 detect] {len(detections)} kept, {len(rejected)} rejected by the size check, {seconds:.1f} s -> {debug / 'detections.png'}")
+    for d in sorted(detections, key=lambda d: -d.score):
+        sz = f"  {d.size['height_m']:.2f} m tall, {d.size['width_m']:.2f} wide, base {d.size['base_m']:.2f}" if d.size else ""
+        sz += f", CLIP {d.clip:.2f}" if d.clip is not None else ""
+        print(f"           {d.label:<5} {d.score:.2f}  box {d.box}{sz}")
+    for r in rejected:
+        print(f"           rejected {r['label']} {r['score']}: {r['why']}")
+    if grade:
+        print(f"\nChecks against the answer key ({answers}):")
+        for r in grade["objects"]:
+            tag = {"found": "PASS", "missed": "FAIL", "out of frame": "----"}[r["result"]]
+            extra = f" (score {r['score']})" if r.get("score") else ""
+            print(f"  {tag}  {r['label']:<5} at pixel {r['pixel']}: {r['result']}{extra}")
+        for e in grade["extra_detections"]:
+            print(f"  FAIL  extra detection: {e['label']} {e['score']} box {e['box']}")
+        for e in grade["decor_detections"]:
+            print(f"  ----  {e['label']} {e['score']} on {e['decor']} (looks exactly like ours; not counted)")
+        print(f"  => found {grade['found']}/{grade['in_frame']}, false detections {grade['false_detections']}")
+    (debug / "detect_report.json").write_text(json.dumps({"grade": grade, "rejected": rejected,
+        "kept": [{"label": d.label, "score": round(d.score, 3), "box": d.box, "size": d.size} for d in detections]},
+        indent=2, default=str) + "\n", encoding="utf-8")
+    return grade
+
+
 def run(photo: Path, name: str, room_name: str | None, hfov: float | None,
-        camera_height: float | None, ceiling_height: float | None, metric: bool, stop_after: str) -> int:
+        camera_height: float | None, ceiling_height: float | None, metric: bool, stop_after: str,
+        answers: Path | None = None, min_score: float = 0.30, no_clip: bool = False) -> int:
     library = json.loads((HERE / "model_library.json").read_text(encoding="utf-8"))
     debug = HERE / "debug" / name
     debug.mkdir(parents=True, exist_ok=True)
     t0 = time.time()
 
+    if answers:   # a render from a built room's reference camera: use that camera's real lens and height
+        answer_room = json.loads(Path(answers).read_text(encoding="utf-8"))["room"]
+        ref = library["rooms"][answer_room]["camera"]
+        room_name = room_name or answer_room
+        if hfov is None:
+            from PIL import Image
+            W0, H0 = Image.open(photo).size
+            hfov = math.degrees(2 * math.atan(math.tan(math.radians(ref["vfov_deg"]) / 2) * W0 / H0))
+        if camera_height is None:
+            camera_height = ref["position"][1]
+
     cam, rgb, cam_source = estimate_camera(str(photo), hfov)                 # 1
     print(f"[1 camera] {cam.width}x{cam.height}, hfov {hfov_of(cam):.1f} deg ({cam_source})")
+
+    detections, t4 = [], 0.0
+    if stop_after in ("detect", "all"):                                       # 4 (before 3: wall colour skips objects)
+        from steps.step4_detect import detect_objects
+        t = time.time()
+        detections = detect_objects(str(photo), pickable_labels(library), (cam.width, cam.height), min_score)
+        t4 = time.time() - t
 
     depth = estimate_depth(rgb, cam)                                         # 2
     points = backproject(depth, cam)
@@ -73,7 +132,6 @@ def run(photo: Path, name: str, room_name: str | None, hfov: float | None,
     print(f"[2 depth ] median {float(__import__('numpy').median(depth)):.2f} m "
           f"(lens correction x{focal_correction(cam):.2f}) -> {debug / 'depth.png'}")
 
-    detections = []   # step 4 is not implemented yet; wall tint then ignores no objects
     if camera_height is None and ceiling_height is None and not metric and cam_source.startswith("no EXIF"):
         ceiling_height = DEFAULT_CEILING_M
     room = fit_room(points, rgb, detections, library, room_name, camera_height, ceiling_height)  # 3
@@ -94,17 +152,26 @@ def run(photo: Path, name: str, room_name: str | None, hfov: float | None,
         print(f"\nChecks against the known room '{room_name}':")
         for c, v, ok in grades:
             print(f"  {'PASS' if ok else 'FAIL'}  {c:<22} {v}")
+    if stop_after in ("detect", "all"):                                       # 4b: size check needs depth + floor
+        from steps.step4_detect import size_check
+        detections, rejected = size_check(detections, points, room, library, cam)
+        if not no_clip:
+            from PIL import Image as _Image
+            from steps.step4_detect import verify_with_clip
+            full = _Image.open(photo).convert("RGB")
+            detections, rejected_clip = verify_with_clip(full, detections, (cam.width / full.width, cam.height / full.height))
+            rejected += rejected_clip
+        grade = report_detect(detections, rejected, rgb, cam, library, debug, answers, t4)
+        if stop_after == "detect":
+            print(f"\n{time.time() - t0:.1f} s total")
+            return 0 if grade is None or (grade["found"] == grade["in_frame"] and grade["false_detections"] == 0) else 1
     print(f"\n{report['seconds']} s total")
     if stop_after == "room":
         return 0 if all(ok for _, _, ok in grades) else 1
 
-    from steps.step4_detect import detect_objects
     from steps.step5_place import place_objects
     from steps.step6_match import match_models
     from steps.step7_export import write_scene
-    labels_av = sorted({m["label"] for m in library["models"].values()
-                        if m.get("status") == "available" and m.get("kind") == "pickable"})
-    detections = detect_objects(rgb, labels_av)                              # 4
     surfaces = known.get("surfaces", {})
     placements = place_objects(detections, points, room, surfaces)           # 5
     objects = match_models(placements, rgb, library)                         # 6
@@ -126,11 +193,16 @@ def main() -> int:
     ap.add_argument("--camera-height", type=float, help="force the scale so the camera is this high, in metres")
     ap.add_argument("--ceiling-height", type=float, help=f"force the scale so the ceiling is this high (default {DEFAULT_CEILING_M} m when the photo has no lens data)")
     ap.add_argument("--metric", action="store_true", help="trust the depth model's scale even without lens data")
-    ap.add_argument("--stop-after", choices=["room", "all"], default="all")
+    ap.add_argument("--stop-after", choices=["detect", "room", "all"], default="all",
+                    help="room: steps 1-3; detect: steps 1-4; all: everything")
+    ap.add_argument("--answers", type=Path, help="answer-key scene JSON (scenes/*.json) to grade step 4 against; "
+                    "only valid for a render taken from the room's reference camera")
+    ap.add_argument("--min-score", type=float, default=0.30, help="detector score threshold")
+    ap.add_argument("--no-clip", action="store_true", help="skip the CLIP second-opinion check in step 4")
     args = ap.parse_args()
     try:
         return run(args.photo, args.name, args.room, args.hfov, args.camera_height, args.ceiling_height,
-                   args.metric, args.stop_after)
+                   args.metric, args.stop_after, args.answers, args.min_score, args.no_clip)
     except NotImplementedError as e:
         print(f"not implemented yet: {e}")
         return 2

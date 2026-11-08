@@ -46,6 +46,8 @@ class Detection:
     score: float
     box: tuple[int, int, int, int]  # x0, y0, x1, y1 in pixels
     mask: Any                        # bool[H, W]
+    size: dict | None = None         # measured size in metres (step 4 size check)
+    clip: float | None = None        # CLIP probability for its own label (step 4 second opinion)
 
 
 @dataclass

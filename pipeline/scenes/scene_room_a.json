@@ -1,10 +1,62 @@
 {
   "version": 1,
-  "source": "hand-made to match RenderedRoom: the mug on the coffee table and the bedside lamp on the bedside table, the two pickables in room 1",
+  "source": "answer key: pickables as placed in RenderedRoom.unity (mug and lamp by BuildRenderedRoom.cs, book from PR #10)",
   "room": "RenderedRoom",
   "wallColor": "#ffffff",
   "objects": [
-    { "label": "mug",  "model": "mug",  "position": [0.80, 0.49, 0.68],  "rotationY": 0, "scale": 1.0 },
-    { "label": "lamp", "model": "lamp", "position": [-0.58, 0.59, 1.89], "rotationY": 0, "scale": 1.0 }
-  ]
+    {
+      "label": "mug",
+      "model": "mug",
+      "position": [
+        0.8,
+        0.49,
+        0.68
+      ],
+      "rotationY": 0,
+      "scale": 1.0
+    },
+    {
+      "label": "lamp",
+      "model": "lamp",
+      "position": [
+        -0.58,
+        0.59,
+        1.89
+      ],
+      "rotationY": 0,
+      "scale": 1.0
+    },
+    {
+      "label": "book",
+      "model": "book",
+      "position": [
+        1.57,
+        0.8,
+        -1.29
+      ],
+      "rotationY": 0,
+      "scale": 1.0
+    }
+  ],
+  "decor": [
+    {
+      "label": "book",
+      "name": "baked closed notebook on the desk",
+      "center": [
+        1.73,
+        0.82,
+        -0.48
+      ]
+    },
+    {
+      "label": "book",
+      "name": "baked book on the coffee table",
+      "center": [
+        0.51,
+        0.52,
+        0.82
+      ]
+    }
+  ],
+  "_comment_decor": "Baked (not pickable) objects that look exactly like a pickable. Grading reports a detection on one of these as 'decor', not as a false detection; the loader ignores this field."
 }

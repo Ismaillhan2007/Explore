@@ -4,47 +4,361 @@
     "RenderedRoom": {
       "status": "available",
       "source": "PR #4: hand-built in Blender (tools/room/build_room.py), scene Assets/_Project/Scenes/RenderedRoom.unity",
-      "size_m": [4.2, 3.5, 5.6],
-      "camera": { "position": [0.95, 1.85, -2.62], "vfov_deg": 73 },
-      "spawn": { "position": [1.25, 0.0, -2.25], "rotationY": -22 },
+      "size_m": [
+        4.2,
+        3.5,
+        5.6
+      ],
+      "camera": {
+        "position": [
+          0.95,
+          1.85,
+          -2.62
+        ],
+        "vfov_deg": 73,
+        "look_at": [
+          -0.12,
+          1.05,
+          0.85
+        ],
+        "render": "docs/room-unity.png",
+        "_comment": "Reference camera of the builder (Transform.LookAt + vertical fieldOfView); docs/*-unity.png is rendered from it."
+      },
+      "spawn": {
+        "position": [
+          1.25,
+          0.0,
+          -2.25
+        ],
+        "rotationY": -22
+      },
       "default_tint": "#ffffff",
       "surfaces": {
         "_comment": "Static, baked furniture that pickables can rest on. Values copied from the collision proxies in BuildRenderedRoom.cs. Do not move these without a Blender rebake.",
-        "coffee_table":  { "shape": "circle", "center": [0.65, 0.78],  "radius": 0.39, "top_y": 0.49 },
-        "bedside_table": { "shape": "circle", "center": [-0.53, 1.85], "radius": 0.32, "top_y": 0.59 },
-        "desk":          { "shape": "box",    "center": [1.76, -0.69], "size": [0.68, 1.55], "top_y": 0.80 },
-        "bed":           { "shape": "box",    "center": [-1.28, -0.10], "size": [1.55, 2.40], "top_y": 0.66 },
-        "floor":         { "shape": "box",    "center": [0.0, 0.0],    "size": [4.2, 5.6],   "top_y": 0.0 }
+        "coffee_table": {
+          "shape": "circle",
+          "center": [
+            0.65,
+            0.78
+          ],
+          "radius": 0.39,
+          "top_y": 0.49
+        },
+        "bedside_table": {
+          "shape": "circle",
+          "center": [
+            -0.53,
+            1.85
+          ],
+          "radius": 0.32,
+          "top_y": 0.59
+        },
+        "desk": {
+          "shape": "box",
+          "center": [
+            1.76,
+            -0.69
+          ],
+          "size": [
+            0.68,
+            1.55
+          ],
+          "top_y": 0.8
+        },
+        "bed": {
+          "shape": "box",
+          "center": [
+            -1.28,
+            -0.1
+          ],
+          "size": [
+            1.55,
+            2.4
+          ],
+          "top_y": 0.66
+        },
+        "floor": {
+          "shape": "box",
+          "center": [
+            0.0,
+            0.0
+          ],
+          "size": [
+            4.2,
+            5.6
+          ],
+          "top_y": 0.0
+        }
       }
     },
     "LivingRoomSofa": {
-      "status": "planned",
-      "source": "photo pipeline/photos/living_room_sofa.jpg (local only); to be built in Blender like RenderedRoom",
-      "measured": {
+      "status": "available",
+      "source": "tools/room/build_living_room_sofa.py + Assets/_Project/Editor/BuildLivingRoomSofa.cs, scene LivingRoomSofa.unity (PR #9)",
+      "size_m": [
+        4.2,
+        2.7,
+        4.8
+      ],
+      "camera": {
+        "position": [
+          0.35,
+          1.05,
+          -1.75
+        ],
+        "vfov_deg": 78.6,
+        "look_at": [
+          -0.3,
+          0.7,
+          2.4
+        ],
+        "render": "docs/living-room-sofa-unity.png"
+      },
+      "spawn": {
+        "position": [
+          0.35,
+          0.0,
+          -1.9
+        ],
+        "rotationY": -8
+      },
+      "default_tint": "#ffffff",
+      "surfaces": {
+        "_comment": "Values copied from the collision proxies in the Unity builder. Do not move these without a Blender rebake.",
+        "coffee_table": {
+          "shape": "circle",
+          "center": [
+            -0.15,
+            0.95
+          ],
+          "radius": 0.45,
+          "top_y": 0.42
+        },
+        "side_table": {
+          "shape": "circle",
+          "center": [
+            -1.0,
+            0.95
+          ],
+          "radius": 0.25,
+          "top_y": 0.53
+        },
+        "pouf": {
+          "shape": "circle",
+          "center": [
+            0.95,
+            0.38
+          ],
+          "radius": 0.34,
+          "top_y": 0.38
+        },
+        "floor": {
+          "shape": "box",
+          "center": [
+            0.0,
+            0.0
+          ],
+          "size": [
+            4.2,
+            4.8
+          ],
+          "top_y": 0.0
+        }
+      },
+      "measured_from_photo": {
         "_comment": "From run_pipeline.py --stop-after room, scaled to an assumed 2.7 m ceiling (no lens data). A brief for the Blender build, not ground truth.",
-        "camera_height_m": 1.01, "camera_pitch_down_deg": 5.8, "camera_hfov_deg": 49.5,
-        "ceiling_height_m": 2.7, "camera_to_back_wall_m": 3.11, "back_wall_angle_deg": 24,
+        "camera_height_m": 1.01,
+        "camera_pitch_down_deg": 5.8,
+        "camera_hfov_deg": 49.5,
+        "ceiling_height_m": 2.7,
+        "camera_to_back_wall_m": 3.11,
+        "back_wall_angle_deg": 24,
         "wall_paint_measured": "#c2c7c0",
         "seen": "grey 3-seat sofa (~2.0 m) against the back wall, two framed posters above it, round wooden coffee table and drum side table, knitted pouf, floor lamp and curtained window on the left, tall plant on the right",
-        "pickable_candidates": ["cushion", "pouf", "small potted plant", "tray"]
+        "pickable_candidates": [
+          "cushion",
+          "pouf",
+          "small potted plant",
+          "tray"
+        ]
       }
     },
     "LivingRoomTV": {
-      "status": "planned",
-      "source": "photo pipeline/photos/living_room_tv.jpg (local only); to be built in Blender like RenderedRoom",
-      "measured": {
+      "status": "available",
+      "source": "tools/room/build_living_room_tv.py + Assets/_Project/Editor/BuildLivingRoomTV.cs, scene LivingRoomTV.unity (PR #11)",
+      "size_m": [
+        4.6,
+        3.0,
+        5.0
+      ],
+      "camera": {
+        "position": [
+          0.55,
+          1.1,
+          -1.75
+        ],
+        "vfov_deg": 84.0,
+        "look_at": [
+          -0.1,
+          1.05,
+          2.5
+        ],
+        "render": "docs/living-room-tv-unity.png"
+      },
+      "spawn": {
+        "position": [
+          0.55,
+          0.0,
+          -1.9
+        ],
+        "rotationY": -8
+      },
+      "default_tint": "#ffffff",
+      "surfaces": {
+        "_comment": "Values copied from the collision proxies in the Unity builder. Do not move these without a Blender rebake.",
+        "coffee_table": {
+          "shape": "box",
+          "center": [
+            -0.3,
+            0.1
+          ],
+          "size": [
+            1.0,
+            1.0
+          ],
+          "top_y": 0.42
+        },
+        "side_table": {
+          "shape": "circle",
+          "center": [
+            0.1,
+            1.6
+          ],
+          "radius": 0.22,
+          "top_y": 0.55
+        },
+        "tv_cabinet": {
+          "shape": "box",
+          "center": [
+            0.65,
+            2.24
+          ],
+          "size": [
+            2.2,
+            0.45
+          ],
+          "top_y": 0.55
+        },
+        "low_table": {
+          "shape": "box",
+          "center": [
+            -1.75,
+            0.55
+          ],
+          "size": [
+            0.9,
+            0.8
+          ],
+          "top_y": 0.38
+        },
+        "floor": {
+          "shape": "box",
+          "center": [
+            0.0,
+            0.0
+          ],
+          "size": [
+            4.6,
+            5.0
+          ],
+          "top_y": 0.0
+        }
+      },
+      "measured_from_photo": {
         "_comment": "From run_pipeline.py --stop-after room, scaled to an assumed 2.7 m ceiling (no lens data). A typical 65-inch TV suggests a slightly larger room (camera 1.24 m, ceiling 3.1 m).",
-        "camera_height_m": 1.07, "camera_pitch_down_deg": 3.5, "camera_hfov_deg": 59.9,
-        "ceiling_height_m": 2.7, "camera_to_back_wall_m": 3.36, "back_wall_angle_deg": 40,
+        "camera_height_m": 1.07,
+        "camera_pitch_down_deg": 3.5,
+        "camera_hfov_deg": 59.9,
+        "ceiling_height_m": 2.7,
+        "camera_to_back_wall_m": 3.36,
+        "back_wall_angle_deg": 40,
         "wall_paint_measured": null,
         "seen": "slatted oak TV wall with a ~65 in TV and low oak cabinet, coffered white ceiling, grey swivel armchair, woven accent chair, tiered square coffee table, gold side table, built-in shelves, window with roman blind on the left",
-        "pickable_candidates": ["book", "vase with branches", "small side-table decor"]
+        "pickable_candidates": [
+          "book",
+          "vase with branches",
+          "small side-table decor"
+        ]
       }
     }
   },
   "models": {
-    "mug":          { "label": "mug", "kind": "pickable", "height_m": 0.10, "status": "available" },
-    "lamp":         { "label": "lamp", "kind": "pickable", "height_m": 0.57, "status": "available" },
-    "PickableCube": { "label": "box", "kind": "pickable", "height_m": 0.20, "status": "available" }
-  }
+    "mug": {
+      "label": "mug",
+      "kind": "pickable",
+      "height_m": 0.1,
+      "status": "available",
+      "plausible": {
+        "height_m": [
+          0.05,
+          0.22
+        ],
+        "width_m": [
+          0.04,
+          0.25
+        ],
+        "base_m": [
+          0.0,
+          1.4
+        ]
+      }
+    },
+    "lamp": {
+      "label": "lamp",
+      "kind": "pickable",
+      "height_m": 0.57,
+      "status": "available",
+      "plausible": {
+        "height_m": [
+          0.3,
+          1.0
+        ],
+        "width_m": [
+          0.15,
+          0.7
+        ],
+        "base_m": [
+          0.25,
+          1.4
+        ]
+      }
+    },
+    "book": {
+      "label": "book",
+      "kind": "pickable",
+      "height_m": 0.03,
+      "status": "available",
+      "plausible": {
+        "height_m": [
+          0.0,
+          0.15
+        ],
+        "width_m": [
+          0.1,
+          0.5
+        ],
+        "base_m": [
+          0.0,
+          1.4
+        ]
+      }
+    },
+    "PickableCube": {
+      "label": "box",
+      "kind": "pickable",
+      "height_m": 0.2,
+      "status": "available",
+      "detect": false
+    }
+  },
+  "_comment_plausible": "plausible: ranges a detection's measured size must fall in (step 4 size check, using depth and the floor from steps 2-3). height = vertical extent, width = largest horizontal extent, base = height of its bottom above the floor. A table lamp sits on furniture (base >= 0.25 m), so floor lamps are rejected."
 }
