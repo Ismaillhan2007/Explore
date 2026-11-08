@@ -1,9 +1,10 @@
-# validate_scene.py and step7 need nothing beyond the standard library.
-# Everything below is for steps 1-6. Python 3.10-3.12 recommended (PyTorch wheels).
+# validate_scene.py and step 7 need nothing beyond the standard library.
+# Steps 1-3 need numpy, pillow, torch, transformers. Python 3.12 recommended (PyTorch wheels).
+# Tested with: numpy 2.5.4, pillow 13.0.0, torch 2.15.0, transformers 5.22.2 (macOS, Apple GPU).
 numpy>=1.26
 pillow>=10.0
-opencv-python>=4.9
 torch>=2.3
-transformers>=4.45      # Depth Anything V2, Grounding DINO / OWLv2
-open_clip_torch>=2.24   # step 6 model matching
+transformers>=4.45      # Depth Anything V2 Metric-Indoor (step 2); Grounding DINO / OWLv2 (step 4)
+# Not needed until steps 4-6 are built:
+# open_clip_torch>=2.24   # step 6 model matching
 # SAM 2: pip install "git+https://github.com/facebookresearch/sam2.git"  (or use transformers' Sam2 classes)

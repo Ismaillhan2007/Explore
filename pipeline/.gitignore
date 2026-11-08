@@ -8,3 +8,4 @@ debug/
 *.ckpt
 *.safetensors
 *.onnx
+photos/

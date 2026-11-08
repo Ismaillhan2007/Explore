@@ -37,6 +37,7 @@ class Room:
     wall_color: str          # "#rrggbb" tint, multiplies the baked wall texture
     name: str                # room name from model_library.json, e.g. "RenderedRoom"
     cam_to_world: Any = None  # 4x4 matrix, camera space (metres) -> Unity world space
+    report: dict = field(default_factory=dict)  # measurements and checks, written to debug/
 
 
 @dataclass
