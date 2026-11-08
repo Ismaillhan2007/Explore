@@ -11,6 +11,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/_Project/Scenes/TestRoom.unity
     guid: d1aae826fc7654be2b2f0bd11fe72029
+  - enabled: 1
+    path: Assets/_Project/Scenes/LivingRoomSofa.unity
+    guid: ea1a27534b8504e4aa7a855a7cf1b6d2
   m_configObjects:
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: ef43df1484eaf475492b8a59d928f8b8, type: 2}
     com.unity.xr.openxr.settings4: {fileID: 11400000, guid: 208262c009fca434cb0f1ac77faf9fc7, type: 2}
